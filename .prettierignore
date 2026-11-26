@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+package-lock.json
+# Hand-formatted documentation (tables)
+*.md
+# Generated or vendored native project
+apps/client/android

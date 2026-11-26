@@ -3,7 +3,8 @@
 A library of small multiplayer games, available as a website and as a native app (Android first, iOS
 later). Play together on one phone, on several phones in the same room, or online.
 
-**Status: design phase.** This repository contains documentation only; no code has been written yet.
+**Status: skeleton.** The app shell (empty game picker, settings in French and English), the Android
+project and the automated checks exist. No game has been ported yet; see [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Games
 
@@ -18,6 +19,18 @@ later). Play together on one phone, on several phones in the same room, or onlin
 TypeScript throughout. The client is a Svelte app built with Vite and wrapped with Capacitor for the
 native app. Game rules are plain TypeScript shared with the server. The server is a room engine that
 runs on Node.js and on Cloudflare Workers.
+
+## Try it
+
+Needs Node.js 22.12 or newer.
+
+```bash
+npm install
+npm run dev            # open the address it prints
+npm run check          # lint, types, unit tests, build
+npm run test:e2e       # end-to-end tests at phone sizes
+npm run android:build  # debug APK (needs the Android SDK and Java 21)
+```
 
 ## Documentation
 

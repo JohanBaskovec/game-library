@@ -64,6 +64,9 @@ games/
 docs/
 ```
 
+Created so far (M1): `apps/client`, `packages/game-kit` and `games/registry`. The rest is created when its
+milestone starts (see `ROADMAP.md`).
+
 Dependency rule, enforced by the TypeScript project setup: `logic` and `packages/*` may import only each
 other. `ui` and `apps/client` may import everything except the server apps. Server apps never import `ui`.
 
@@ -167,6 +170,17 @@ Games reach the device only through these, so that browser and native app behave
   update when they differ.
 - Android first. iOS-safe habits from day one: safe-area insets, no reliance on APIs iOS lacks (such as
   `navigator.vibrate`), no Android-only plugin without an iOS equivalent.
+
+### 5.5 Routing and browser targets
+
+- Screens are reached by hash routes (`#/`, `#/settings`, later `#/play/<id>` and `#/room/<code>`), parsed
+  by one function that sends unknown addresses to the picker (P-16). The tab bar shows the two top-level
+  screens; a game takes the whole screen while it runs.
+- The build is translated down to Chrome 100, Safari 15 and Firefox 100 (P-15), so modern syntax and CSS
+  can be written freely.
+- Light and dark colours come from CSS variables and follow the system setting (D-17).
+- Layout checks that hold today and are tested: no sideways scrolling from 320 px wide, the tab bar sits
+  at the bottom of the screen, every tap target is at least 44 px high, no request leaves the app.
 
 ## 6. Rooms
 
