@@ -1,0 +1,18 @@
+{
+  "name": "@game-library/server-cloudflare",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@game-library/game-kit": "*",
+    "@game-library/registry": "*",
+    "@game-library/room": "*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261125.1",
+    "@game-library/host-conformance": "*"
+  }
+}

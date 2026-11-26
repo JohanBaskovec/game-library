@@ -53,6 +53,7 @@ apps/
 packages/
   game-kit/            Game contract types, seeded random generator, shared pure helpers
   room/                Room engine and wire protocol types
+  host-conformance/    The suite every server host must pass (HTTP API and room protocol), run by each host's tests
 games/
   <id>/                One npm workspace per game: @game-library/<id>
     manifest.ts        Title, tagline, languages: enough to list the game
@@ -65,8 +66,8 @@ games/
 docs/
 ```
 
-Created so far (M1 to M3): `apps/client`, `apps/server-node`, `packages/game-kit`, `packages/room`,
-`games/registry` and `games/le-curseur`. The Cloudflare host is created in M4 (see `ROADMAP.md`).
+Created so far (M1 to M4): `apps/client`, `apps/server-node`, `apps/server-cloudflare`, `packages/game-kit`,
+`packages/room`, `packages/host-conformance`, `games/registry` and `games/le-curseur`.
 
 `games/registry` has two entry points: `@game-library/registry` lists the manifests (light, for the app's
 first screen) and `@game-library/registry/logics` holds the rules of each game, for servers. They are kept
@@ -321,7 +322,7 @@ adapts, not against the standard `Request` and `Response` objects.
 
 ### 6.4 Protecting the server
 
-Rooms are open to anyone with the code, so (every limit below has a test that breaks it on purpose):
+Rooms are open to anyone with the code, so (every limit below has a test that breaks it on purpose; the values are the Node.js host's, and section 7.2 lists where the Cloudflare host differs):
 
 | Protection | Value |
 |---|---|
@@ -366,11 +367,47 @@ the life of the room, and logs never contain names, clues or tokens.
 
 ### 7.2 Cloudflare host (`apps/server-cloudflare`)
 
-- A Worker serves the static client (Workers static assets, with fallback to the app's main page for
-  client-side routes) and the HTTP API.
-- Each room is one **Durable Object**, addressed by the room code. It accepts the WebSockets through the
-  hibernation API, stores the room snapshot in its own storage, and uses an alarm for wake-ups.
-- Cloudflare Workers is not Node.js; this is why the engine avoids Node.js APIs.
+One Worker, configured by `wrangler.jsonc` at the repository root:
+
+- **Website**: Cloudflare serves the files of `apps/client/dist` itself (Workers static assets). Only `/api/*`
+  runs the Worker (`run_worker_first`). `apps/client/public/_headers` gives the files the same headers as the
+  Node.js host (a test checks the content security policy is identical). Routes are after the `#`, so there
+  is no fallback to the page (P-16).
+- **`worker.ts`**: the HTTP API (`/api/health`, `/api/catalog`, `POST /api/rooms`, CORS) and the
+  WebSocket entry `/api/rooms/{code}/ws`. It uses the same `api.ts` helpers of `packages/room` as the Node.js
+  host for what a request must look like and which status a failure gets. It draws the code and the host's
+  secret with `crypto.getRandomValues` and retries when a code is already a room.
+- **`RoomDO`** (`room-do.ts`): one Durable Object per room, named by its code. It accepts sockets through the
+  Hibernation API (`ctx.acceptWebSocket`), so the object can be evicted from memory while the sockets stay
+  open and an idle room costs no duration. It keeps the room snapshot in its own SQLite-backed storage and
+  uses its alarm for the engine's `wake` effect. A connection's id and start time live in the socket's
+  attachment, which survives hibernation.
+- **`RoomRuntime`** (`runtime.ts`): everything the object does, with no Cloudflare import: it loads the room on
+  the first event after waking, rebuilds the connections from the sockets still open, feeds events to the
+  engine and carries out the effects (send, close, persist, alarm, expire). The part that is hard to get right,
+  waking up, is tested by creating a second runtime over the same storage and sockets.
+- **`LimiterDO`** (`limiter-do.ts`): one small object per address (named by `CF-Connecting-IP`) holding two token
+  buckets (rooms created, unknown codes tried), kept in storage and erased by an alarm once they would be full.
+  The buckets are the pure `takeFromBucket` of `packages/room`, the same arithmetic as the Node.js host's.
+  A limiter that cannot answer refuses.
+- A WebSocket for a code that is not a room (or is not a code) is accepted by the Worker only to say
+  `room-not-found` and close with 4404, as the Node.js host does, and it counts toward the guessing limit.
+- Settings, as variables in `wrangler.jsonc` (`vars`): `ALLOWED_ORIGINS` (comma-separated, empty means any), and
+  for tests `ROOMS_PER_ADDRESS_BURST`, `ROOMS_PER_ADDRESS_PER_MINUTE`, `UNKNOWN_ROOMS_PER_ADDRESS_BURST` and
+  `MESSAGES_BURST`.
+
+Differences from the Node.js host (P-28), all deliberate:
+
+| | Node.js host | Cloudflare host |
+|---|---|---|
+| Rooms in total | `MAX_ROOMS` (500) | No cap: each room is its own object (Cloudflare's own limits apply) |
+| Sockets per address | 30 | Not limited (it would need one more object holding every socket of an address) |
+| Message rate | Per socket, kept while it lives | Per socket, but it restarts when the object wakes from hibernation |
+| Dead connections | The server pings every 30 s | No pings: Cloudflare closes dead sockets and wakes the object |
+| Rooms after a restart | Lost (P-6) | Kept; connections are not (everyone reconnects) |
+| Address | `TRUST_PROXY` and `X-Forwarded-For` | `CF-Connecting-IP`, which Cloudflare sets |
+
+Cloudflare Workers is not Node.js; this is why the engine avoids Node.js APIs.
 
 Facts checked on 2026-11-26 in Cloudflare's documentation; confirm them on the live pages before the
 first deployment (O-2):
@@ -389,15 +426,15 @@ Sources: [Durable Objects pricing](https://developers.cloudflare.com/durable-obj
 [Workers static assets](https://developers.cloudflare.com/workers/static-assets/),
 [Containers](https://developers.cloudflare.com/containers/).
 
-### 7.3 Deploying the website
+### 7.3 Deploying
 
-Today the website is static files, served by a Cloudflare Worker with static assets (P-18). The config is
-`wrangler.jsonc` at the repository root: Worker name `game-library`, files from `apps/client/dist`.
-There is no SPA fallback because routes live after the `#` (P-16): an unknown path is a plain 404.
+The website and the rooms are one Worker, `game-library` (P-18, P-28): `wrangler.jsonc` lists the static
+assets, the Worker's entry, the two Durable Object classes and their migration. Deploying uploads all of them
+together, so the website and the rooms always have the same version.
 
-Manual: `npm run deploy` (after `npx wrangler login`), or `npm run deploy:preview` to upload a version
-without making it live. Checked here without a Cloudflare account: `wrangler deploy --dry-run` finds the
-files, and `wrangler dev` serves the page and its assets with the right content types.
+Manual: `npm run deploy` (after `npx wrangler login`), or `npm run deploy:preview` to upload a version without
+making it live. Checked here without a Cloudflare account: the whole Worker runs on workerd through
+`wrangler dev` (the Cloudflare tests start it), and `wrangler deploy --dry-run` bundles it.
 
 Automatic, from GitHub, with Cloudflare "Workers Builds" (dashboard, Settings, Build):
 
@@ -410,15 +447,22 @@ Automatic, from GitHub, with Cloudflare "Workers Builds" (dashboard, Settings, B
 | Non-production branch command | `npx wrangler versions upload` |
 | Production branch | `main` |
 
-Not yet confirmed by a real build in the dashboard: how the root directory setting behaves with npm
-workspaces. When the rooms Worker arrives (M4) its config moves to `apps/server-cloudflare`, with
-`assets.directory` pointing at `../client/dist`, and the root directory setting moves with it.
+Durable Objects and migrations: the first deploy that contains `migrations` creates the two classes. A class is
+added, renamed or removed only by adding a new migration with a new tag; never edit `v1`. A preview version
+(`versions upload`) shares the Durable Objects of the live Worker, so a preview can read and change real rooms;
+treat it as production for that reason.
+
+The app and the site on one address: the website on that address talks to its own origin (no setting). The
+native app needs `VITE_SERVER_URL` (and `VITE_PUBLIC_URL` for links and QR codes) at build time (P-25, O-11).
+
+Not yet confirmed by a real build in the dashboard: how the root directory setting behaves with npm workspaces,
+and the first deployment itself, which needs the user's Cloudflare account.
 
 ## 8. Versions
 
 | Version | Changes when | Effect of a mismatch |
 |---|---|---|
-| Protocol version | Room messages or the HTTP API change | The client asks the player to update before using rooms |
+| Protocol version | Room messages or the HTTP API change | The client asks the player to update before using rooms: when creating a room it compares the `protocol` of the server's reply with its own, when joining the server answers `protocol-mismatch` |
 | `rulesVersion` (per game) | Rules, random draw order or content lists change | Same, for that game only; old saved games of that game are discarded |
 | Save format (per game) | The shape of the saved state changes | The saved game is ignored |
 
@@ -440,7 +484,12 @@ workspaces. When the rooms Worker arrives (M4) its config moves to `apps/server-
   host: whole games with the guessing phone's WebSocket frames checked for the target, shared seats,
   watching, reconnection (a socket cut on purpose), the host leaving, joining by code and by link, French,
   and layout at four phone sizes.
-- **Cloudflare host**: run locally with Cloudflare's own tooling before each deployment.
+- **Host contract**: `packages/host-conformance` is one suite (HTTP API, a whole game, close codes, secrecy,
+  origins) that each host's tests run against the real running host, so the two cannot drift apart.
+- **Cloudflare host**: `RoomRuntime` is tested with fake sockets and storage, including a simulated wake-up
+  (a new runtime over the same storage and sockets); the whole Worker is then run on Cloudflare's own runtime
+  (workerd, through `wrangler dev` with a throwaway config) and must pass the host contract, plus its own
+  tests of the limits kept by `LimiterDO`. The first deployment on a Cloudflare account is not tested here.
 - **Android**: the build runs in the cloud environment (Android SDK installed by its setup script).
   Running the app needs an emulator or a phone, on the user's machine: the cloud has no KVM.
 

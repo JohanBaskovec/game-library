@@ -29,7 +29,7 @@ describe('creating a room', () => {
   });
 
   it('uses the same origin when the endpoint is relative', async () => {
-    const fetchFunction = reply(201, { code: 'K7M2P', token: 't' });
+    const fetchFunction = reply(201, { code: 'K7M2P', token: 't', protocol: 1 });
     await createRoomRequest({ ...endpoints, api: '' }, request, fetchFunction);
     expect((fetchFunction as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toBe('/api/rooms');
   });
@@ -76,6 +76,18 @@ describe('creating a room', () => {
         ok: false,
         error: 'unavailable',
       });
+    }
+  });
+
+  it('refuses a server that speaks another version of the protocol, or does not say', async () => {
+    for (const protocol of [{ protocol: 2 }, { protocol: 0 }, { protocol: '1' }, {}]) {
+      expect(
+        await createRoomRequest(
+          endpoints,
+          request,
+          reply(201, { code: 'K7M2P', token: 't', ...protocol }),
+        ),
+      ).toEqual({ ok: false, error: 'protocol-mismatch' });
     }
   });
 });

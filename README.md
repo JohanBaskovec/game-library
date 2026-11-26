@@ -3,8 +3,8 @@
 A library of small multiplayer games, available as a website and as a native app (Android first, iOS
 later). Play together on one phone, on several phones in the same room, or online.
 
-**Status: rooms.** The app shell, the Android project, the automated checks, the first game (Le Curseur,
-in French and English) and rooms to play it on several phones (a Node.js server) exist. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+**Status: online (built, not yet deployed).** The app shell, the Android project, the automated checks, the first game (Le Curseur,
+in French and English) and rooms to play it on several phones (a Node.js server, and a Cloudflare host) exist. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Games
 
@@ -18,7 +18,7 @@ in French and English) and rooms to play it on several phones (a Node.js server)
 
 TypeScript throughout. The client is a Svelte app built with Vite and wrapped with Capacitor for the
 native app. Game rules are plain TypeScript shared with the server. The server is a room engine that
-runs on Node.js (built) and on Cloudflare Workers (next).
+runs on Node.js and on Cloudflare Workers with Durable Objects.
 
 ## Try it
 
