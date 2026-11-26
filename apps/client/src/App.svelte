@@ -3,6 +3,8 @@
   import { router, routeHref, type Route } from './lib/router.svelte.ts';
   import PickerScreen from './screens/PickerScreen.svelte';
   import PlayScreen from './screens/PlayScreen.svelte';
+  import RoomCreateScreen from './screens/RoomCreateScreen.svelte';
+  import RoomScreen from './screens/RoomScreen.svelte';
   import SettingsScreen from './screens/SettingsScreen.svelte';
 
   const tabs: { route: Route; label: () => string }[] = [
@@ -19,6 +21,12 @@
 {#if router.route.name === 'play'}
   {@const route = router.route}
   <PlayScreen gameId={route.gameId} />
+{:else if router.route.name === 'room-new'}
+  {@const route = router.route}
+  <RoomCreateScreen gameId={route.gameId} />
+{:else if router.route.name === 'room'}
+  {@const route = router.route}
+  <RoomScreen code={route.code} />
 {:else}
   <div class="app">
     <header class="topbar">
@@ -75,6 +83,9 @@
   }
 
   .tabs {
+    /* Stays at the bottom of the screen while a long page scrolls. */
+    position: sticky;
+    bottom: 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
     border-top: 1px solid var(--border);

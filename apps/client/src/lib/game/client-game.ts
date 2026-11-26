@@ -33,6 +33,14 @@ export interface MenuProps<Config> {
   onResume: () => void;
 }
 
+/** The editor of a game's settings, used by the host of a room (the menu has its own copy of the fields). */
+export interface ConfigEditorProps<Config> {
+  t: Translate;
+  /** The settings to start from. Read once. */
+  value: Config;
+  onchange: (config: Config) => void;
+}
+
 export interface ScreenProps<View> {
   t: Translate;
   locale: Locale;
@@ -47,9 +55,12 @@ export interface ClientGame<Config, State, View extends BaseView> {
   /** Interface text of the game, per language. */
   readonly messages: Readonly<Record<Locale, Readonly<Record<string, string>>>>;
   readonly Menu: Component<MenuProps<Config>>;
+  readonly ConfigEditor: Component<ConfigEditorProps<Config>>;
   /** The playing screens (everything but the hand-off, the frame and the end-of-game buttons). */
   readonly Screen: Component<ScreenProps<View>>;
   handoff(view: View, t: Translate, locale: Locale): HandoffInfo;
+  /** The settings a new game starts from, with texts in the language of the interface. */
+  defaultConfig(t: Translate): Config;
 }
 
 /**

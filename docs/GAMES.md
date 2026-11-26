@@ -60,6 +60,10 @@ next ports:
 - Differences that come from the library, not from a redesign: the two hand-off phases left the state
   machine for the shell; the random numbers are seeded; the rules summary is built from the score
   constants; the interface is in English and French.
+- **In rooms (M3):** a team's phone gets its seat's view. The waiting screens, a reusable settings editor
+  (`ConfigEditor`) and `seatNames` were added for this; the rules did not change. Several phones can share
+  a team. Next ports: give every game these three things (`seatNames`, `ConfigEditor`, waiting screens for
+  a seat that is not acting) and a test that the other seat is never sent a secret.
 - Found while porting: the "How to play" row was smaller than 44 px, and a 20-letter team name made the
   page scroll sideways on a phone. Both were fixed (they existed in the original).
 - Plan, as written before the port:

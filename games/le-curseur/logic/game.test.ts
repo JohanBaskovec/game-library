@@ -157,6 +157,13 @@ describe('config', () => {
   });
 });
 
+describe('seat names', () => {
+  it('are the team names, in seat order', () => {
+    expect(leCurseur.seatNames(CONFIG)).toEqual(['Blue', 'Orange']);
+    expect(leCurseur.seatNames(leCurseur.defaultConfig())).toEqual(['', '']);
+  });
+});
+
 describe('setup', () => {
   it('starts on the first clue of the starting team', () => {
     const state = start();

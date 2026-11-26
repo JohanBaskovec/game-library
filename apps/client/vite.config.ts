@@ -19,5 +19,7 @@ export default defineConfig({
     target: BROWSER_TARGET,
     cssTarget: BROWSER_TARGET,
   },
-  server: { host: true },
+  // In development the API and the room sockets are served by the Node.js host (`npm run dev:server`).
+  server: { host: true, proxy: { '/api': { target: 'http://127.0.0.1:8787', ws: true } } },
+  preview: { proxy: { '/api': { target: 'http://127.0.0.1:8787', ws: true } } },
 });

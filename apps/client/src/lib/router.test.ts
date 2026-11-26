@@ -35,11 +35,40 @@ describe('parseRoute', () => {
     }
   });
 
+  it('finds the creation of a room for a game', () => {
+    expect(parseRoute('#/room/new/le-curseur')).toEqual({ name: 'room-new', gameId: 'le-curseur' });
+    expect(parseRoute('#/room/new/le-curseur/')).toEqual({
+      name: 'room-new',
+      gameId: 'le-curseur',
+    });
+    for (const hash of ['#/room/new', '#/room/new/', '#/room/new/Bad_Id', '#/room/new/a/b']) {
+      expect(parseRoute(hash), hash).toEqual({ name: 'picker' });
+    }
+  });
+
+  it('finds a room by its code, however it was typed', () => {
+    expect(parseRoute('#/room/K7M2P')).toEqual({ name: 'room', code: 'K7M2P' });
+    expect(parseRoute('#/room/k7m2p')).toEqual({ name: 'room', code: 'K7M2P' });
+    expect(parseRoute('#/room/K7M2P/')).toEqual({ name: 'room', code: 'K7M2P' });
+    for (const hash of [
+      '#/room',
+      '#/room/',
+      '#/room/K7M2',
+      '#/room/K7M2PX',
+      '#/room/K7M20',
+      '#/room/K7M2P/extra',
+    ]) {
+      expect(parseRoute(hash), hash).toEqual({ name: 'picker' });
+    }
+  });
+
   it('builds links that parse back to the same route', () => {
     for (const route of [
       { name: 'picker' },
       { name: 'settings' },
       { name: 'play', gameId: 'forest-maze' },
+      { name: 'room-new', gameId: 'le-curseur' },
+      { name: 'room', code: 'K7M2P' },
     ] as const) {
       expect(parseRoute(routeHref(route))).toEqual(route);
     }

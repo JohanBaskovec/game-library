@@ -1,5 +1,7 @@
 import { messages } from '../i18n/index.ts';
 import { leCurseur } from '../logic/index.ts';
+import { defaultConfig } from './config.ts';
+import ConfigEditor from './ConfigEditor.svelte';
 import { handoff } from './handoff.ts';
 import Menu from './Menu.svelte';
 import Screen from './Screen.svelte';
@@ -12,6 +14,8 @@ export const clientGame = {
   logic: leCurseur,
   messages,
   Menu,
+  ConfigEditor,
   Screen,
   handoff,
+  defaultConfig,
 };

@@ -507,6 +507,7 @@ export const leCurseur: GameLogic<Config, State, CurseurView> = {
   defaultConfig,
   normalizeConfig,
   validateConfig,
+  seatNames: (config) => config.teamNames,
   setup,
   apply,
   view,

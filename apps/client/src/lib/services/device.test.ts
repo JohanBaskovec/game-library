@@ -81,4 +81,46 @@ describe('web device', () => {
     await Promise.resolve();
     expect(lock.request).toHaveBeenCalledTimes(2);
   });
+
+  it('copies text to the clipboard when it can', async () => {
+    const writeText = vi.fn(async (_text: string) => {});
+    const device = createWebDevice({ clipboard: { writeText } }, undefined);
+    expect(await device.copyText('https://x.example/#/room/K7M2P')).toBe(true);
+    expect(writeText).toHaveBeenCalledWith('https://x.example/#/room/K7M2P');
+  });
+
+  it('says so when it cannot copy', async () => {
+    expect(await createWebDevice({}, undefined).copyText('x')).toBe(false);
+    expect(await createWebDevice(undefined, undefined).copyText('x')).toBe(false);
+    const refusing = {
+      clipboard: {
+        writeText: async () => {
+          throw new Error('denied');
+        },
+      },
+    };
+    expect(await createWebDevice(refusing, undefined).copyText('x')).toBe(false);
+  });
+
+  it('opens the sharing sheet when there is one, and says so when there is not or it is closed', async () => {
+    const share = vi.fn(async (_data: object) => {});
+    const device = createWebDevice({ share }, undefined);
+    expect(device.canShare()).toBe(true);
+    expect(await device.share({ title: 'T', text: 'X', url: 'https://x.example' })).toBe(true);
+    expect(share).toHaveBeenCalledWith({ title: 'T', text: 'X', url: 'https://x.example' });
+
+    const none = createWebDevice({}, undefined);
+    expect(none.canShare()).toBe(false);
+    expect(await none.share({ title: 'T', text: 'X', url: 'u' })).toBe(false);
+
+    const closed = createWebDevice(
+      {
+        share: async () => {
+          throw new DOMException('closed', 'AbortError');
+        },
+      },
+      undefined,
+    );
+    expect(await closed.share({ title: 'T', text: 'X', url: 'u' })).toBe(false);
+  });
 });

@@ -65,8 +65,12 @@ games/
 docs/
 ```
 
-Created so far (M1, M2): `apps/client`, `packages/game-kit`, `games/registry` and `games/le-curseur`. The
-rest is created when its milestone starts (see `ROADMAP.md`).
+Created so far (M1 to M3): `apps/client`, `apps/server-node`, `packages/game-kit`, `packages/room`,
+`games/registry` and `games/le-curseur`. The Cloudflare host is created in M4 (see `ROADMAP.md`).
+
+`games/registry` has two entry points: `@game-library/registry` lists the manifests (light, for the app's
+first screen) and `@game-library/registry/logics` holds the rules of each game, for servers. They are kept
+apart so that the app does not load every game's rules and content just to list the games.
 
 Dependency rule, enforced by the TypeScript project setup: `logic` and `packages/*` may import only each
 other. `ui` and `apps/client` may import everything except the server apps. Server apps never import `ui`.
@@ -87,6 +91,7 @@ interface GameLogic<Config, State, View extends BaseView> {
   defaultConfig(): Config;
   normalizeConfig(input: unknown): Config;        // a well-formed config from untrusted data
   validateConfig(config: Config): string | null;  // an error code, or null
+  seatNames(config: Config): readonly string[];   // what each seat is called (team names), '' if none
   setup(config: Config, seed: string): State;     // same config and seed, same game; throws if invalid
   apply(state: State, seat: SeatId, action: unknown, now: number): Result<State>;
   view(state: State, seat: SeatId): View;         // everything this seat may see, nothing more
@@ -123,14 +128,18 @@ Properties every logic module has:
 - A game's `ui/index.ts` exports `clientGame = { logic, messages, Menu, Screen, handoff }`. The shell
   finds it by its place (`games/<id>/ui/index.ts`) and loads it on demand when the player opens the game,
   so the picker stays light as the library grows. The shell never names a game.
-- `Menu` is the settings screen before a game. `Screen` shows the playing screens and receives the
+- `Menu` is the settings screen before a game on one phone, and `ConfigEditor` its fields alone, which the
+  host of a room uses in the lobby. `defaultConfig(t)` gives the settings a new game or room starts from,
+  with texts in the language of the interface. `Screen` shows the playing screens and receives the
   current `View`, a `send(action)` function, a translate function, the language and the last refused
   action. It never sees `State`. `handoff(view, t, locale)` returns the text of the shell's hand-off
   screen, which must contain nothing secret.
 - A game never imports shell code: everything reaches it through these props. Shared looks come from the
   CSS variables and building-block classes in `app.css` (buttons, fields, seat colours).
-- The same components will serve all modes. Screens for a seat that is not acting ("waiting for the other
-  team") arrive with rooms (M3).
+- The same components serve all modes. In a room a device is shown the view of its own seat even when it is
+  not that seat's move, so `Screen` also draws the waiting screens ("Waiting for the other team to give a
+  clue"), told apart by `view.seat !== view.actingSeat`. Messages about a team never put its name in the
+  subject of a sentence ("Waiting for {team}…"), since a name can be plural or any word.
 - **Canvas games** use Svelte for screens and the HUD, and one Svelte component that owns the `<canvas>`,
   sizes it, and runs a plain `requestAnimationFrame` drawing loop written in ordinary TypeScript. The
   loop reads the latest view; it does not go through Svelte's reactivity for each frame.
@@ -195,12 +204,18 @@ Games reach the device only through these, so that browser and native app behave
 - An installed app can be older than the server. Before creating or joining a room the client compares
   its protocol version and the game's `rulesVersion` with the server's catalog and asks the player to
   update when they differ.
+- **The server's address.** A website served by the Node.js host uses its own origin. The app is not served
+  by the server, so it needs `VITE_SERVER_URL` at build time (and `VITE_PUBLIC_URL` for the links and QR
+  codes people share); without it rooms are unavailable and the app says so, rather than trying to reach
+  `https://localhost`. `apps/client/.env.example` lists both. The server accepts requests from any origin
+  by default, which the app's origin needs.
 - Android first. iOS-safe habits from day one: safe-area insets, no reliance on APIs iOS lacks (such as
   `navigator.vibrate`), no Android-only plugin without an iOS equivalent.
 
 ### 5.5 Routing and browser targets
 
-- Screens are reached by hash routes (`#/`, `#/settings`, later `#/play/<id>` and `#/room/<code>`), parsed
+- Screens are reached by hash routes (`#/`, `#/settings`, `#/play/<id>`, `#/room/new/<id>` and
+  `#/room/<code>`), parsed
   by one function that sends unknown addresses to the picker (P-16). The tab bar shows the two top-level
   screens; a game takes the whole screen while it runs.
 - The build is translated down to Chrome 100, Safari 15 and Firefox 100 (P-15), so modern syntax and CSS
@@ -211,68 +226,143 @@ Games reach the device only through these, so that browser and native app behave
 
 ## 6. Rooms
 
-### 6.1 Model (P-3 to P-6)
+### 6.1 Model (D-8, D-9, P-3 to P-6, P-23)
 
-- A **room** has a short code, a game, a configuration, seats, connected devices and, once started, the
-  game state. It moves from lobby to playing to finished, and back to lobby for another game.
-- A **device** joins with a display name and takes a **seat**. Several devices may share a seat; they
-  all receive that seat's view and any of them may act.
-- The device that created the room is its host: it sets the configuration and starts the game. If it
-  leaves, the role passes to the device connected longest.
-- A device keeps a **reconnect token**. After a reload or a dropped connection it comes back to the
-  same seat without the others doing anything.
-- Rooms are deleted after a period without activity. There are no accounts and no database (D-3).
+- A **room** has a five-character code (letters and digits that cannot be confused: no 0/O, 1/I), a game, its
+  settings, devices and, once started, the game state. It is in the **lobby**, **playing** or **finished**,
+  and goes back to the lobby for another game.
+- A **device** (a phone or a browser) joins with a display name of at most 20 characters. It has a public id
+  and a secret **token**, which is never sent to the other devices. It keeps its identity across
+  reconnections.
+- A device takes a **seat**, or none (it is then only watching). Several devices may share a seat: all of
+  them receive that seat's view and any of them may act for it. Seats can be changed at any time: the games
+  are cooperative, so seats are an honour system, not a lock.
+- The **host** is the device that created the room. Its settings and "start" are the only things only the
+  host may do, besides taking everyone back to the lobby. The role passes to the earliest device that is
+  still connected when the host leaves, or when the host has been offline for a minute and another device
+  is connected.
+- A device keeps its token and name in its own storage (`gl.room.<CODE>`, `gl.player.name`): after a reload
+  or a dropped connection it comes back to the same seat without anyone doing anything. Leaving, or the
+  room closing, deletes the token.
+- **Lifetime.** A room lives in memory and is deleted 15 minutes after its last device disconnected, or
+  after three hours without a message. There is no database (D-3).
+
+Who may do what:
+
+| Action | Who | When |
+|---|---|---|
+| Join | Anyone with the code | Any time; the room must not be full (12 devices) |
+| Take or leave a seat | Any device | Any time |
+| Change the settings | The host | Lobby |
+| Start | The host | Lobby, valid settings, every seat has a connected device |
+| Act in the game | A device with a seat | Playing; the game checks the seat, the moment and the move |
+| Back to the lobby | The host | Playing or finished |
+| Leave | Any device | Any time |
 
 ### 6.2 Engine (`packages/room`, D-11)
 
-The engine is a set of pure functions over a serializable room snapshot:
+The engine is a set of pure functions over a serializable room snapshot (`RoomState`):
 
 ```
-(room snapshot, event) → (new room snapshot, effects)
+step(env, room, event, { now, entropy }) → { room, effects }
 
-events:  device connected · message received · device disconnected · wake-up time reached
-effects: send message to device · persist snapshot · wake me at time T · close connection
+events:  connected · message (parsed JSON) · disconnected · tick
+effects: send (message to a connection) · close · persist · wake (at a time, or never) · expire
 ```
 
-It owns no socket and no timer and never reads the clock; the host passes the current time with each
-event. This is what keeps both hosts thin, and it is required by Cloudflare, where a room is unloaded
-from memory between messages and rebuilt from its saved snapshot.
+- It owns no socket and no timer, never reads the clock (`now` comes with the event) and draws no
+  randomness: the host passes fresh cryptographic random hex (`entropy`) with every event, and the engine
+  takes tokens, ids and game seeds from it.
+- `createRoom` makes a room for a game; `restoreRoom` checks a saved one (a room with other rules or a game
+  state that no longer passes the game's own check is dropped; a finished game falls back to the lobby).
+- Open connections are part of the snapshot only while they last: the host rebuilds them after a restart.
+- `wake` says when the next `tick` is due (an unjoined socket timing out, host succession, expiry). This is
+  what the Cloudflare host will turn into an alarm (M4).
+- Every message of a seat's view carries a version number `v`, so a device can ignore one that arrives late.
+- It is exercised by 80 tests: joining, reconnection, seats, who may act, secrecy of views, host succession,
+  expiry, saved rooms, and that it never changes the room it is given.
 
-### 6.3 Protocol
+### 6.3 Protocol (`PROTOCOL_VERSION` 1)
 
-JSON messages over one WebSocket per device, with a protocol version sent on connection.
+JSON over one WebSocket per device, at `/api/rooms/<CODE>/ws`. Messages are at most 16 KB.
 
-| Direction | Messages (sketch) |
+| Direction | Message | Meaning |
+|---|---|---|
+| Device to server | `join` (protocol, name, token?, rules?) | First message: who this is. `rules` makes the server refuse an app with other rules |
+| | `seat` (number or null) | Take or leave a seat |
+| | `config` (settings) | Host: change the settings |
+| | `start` | Host: start the game |
+| | `action` (anything) | Play; the game checks it |
+| | `reset` | Host: back to the lobby |
+| | `leave` | Leave for good |
+| Server to device | `joined` (token, deviceId) | Accepted; keep the token |
+| | `room` (v, room) | What the device may know of the room: members, seats and their names, settings, phase, who it is. Never a game's state |
+| | `view` (v, seat, actingSeat, over, view) | The game as this device's seat sees it |
+| | `refused` (error) | The game refused an action; nothing changed |
+| | `error` (code) | `bad-message`, `protocol-mismatch`, `rules-mismatch`, `not-joined`, `bad-name`, `room-full`, `bad-seat`, `not-host`, `wrong-phase`, `invalid-config`, `seats-incomplete`, `no-seat`, `unknown-game`, `room-closed`, `room-not-found`, `rate-limited` |
+
+After `joined` comes the room, then the view when there is one. The room also tells a device which rules
+version its game runs, so an app that has other rules can refuse to play (`rules-mismatch`) after joining
+from a link. `protocol-mismatch`, `rules-mismatch`, `room-full`, `bad-name`, `room-not-found` and
+`room-closed` end a session; anything else is temporary and the device reconnects by itself, waiting
+0.5 s, 1 s, 2 s… up to 8 s (with a little randomness), at once when the network or the page comes back.
+
+HTTP API, the same on every host:
+
+| Route | Purpose |
 |---|---|
-| Device to server | join (name, reconnect token) · take seat · set configuration · start · action · leave |
-| Server to device | room (members, seats, configuration, phase) · view (this seat's view) · error (code) |
+| `GET /api/health` | Liveness check: `{ ok, rooms }` |
+| `GET /api/catalog` | `{ protocol, limits, games: [{ id, rulesVersion, seatCount, singleDevice, contentLocales }] }` |
+| `POST /api/rooms` | Body `{ gameId, rules?, config? }`. Returns 201 `{ code, token, protocol }`: the token makes the creator's first device the host. 400 bad request, 404 unknown game, 409 other rules, 413 too large, 429 too many from this address, 503 server full |
+| `GET /api/rooms/<CODE>/ws` | WebSocket upgrade |
 
-The server sends views, never state, and sends each device only its own seat's view.
-
-HTTP API, shared by both hosts and written against the standard `Request` and `Response` objects:
-
-| Route (sketch) | Purpose |
-|---|---|
-| `GET /api/catalog` | Games this server can run, with their rules versions, and the protocol version |
-| `POST /api/rooms` | Create a room, returns its code |
-| `GET /api/rooms/<code>/ws` | WebSocket connection to a room |
-| `GET /api/health` | Liveness check |
+The shared package has no DOM or Node types, so the API is written as small functions that each host
+adapts, not against the standard `Request` and `Response` objects.
 
 ### 6.4 Protecting the server
 
-Rooms are open to anyone with the code, so: limits on message size and rate, on devices per room and on
-room creation per address; display names and clues length-limited and treated as untrusted text;
-every action validated by the game logic (section 4.1). No personal data is stored: a display name and
-what players type during a game exist only for the life of the room.
+Rooms are open to anyone with the code, so (every limit below has a test that breaks it on purpose):
+
+| Protection | Value |
+|---|---|
+| Message size | 16 KB, enforced by the WebSocket layer (the socket is closed) |
+| Message rate | 30 at once, then 5 a second, per socket; five bad or excess messages close it |
+| Sockets per address | 30 |
+| Rooms created per address | 10 at once, then 10 a minute |
+| Guessing room codes | 20 unknown codes per address, then 1 every 3 seconds |
+| Rooms in total | 500 |
+| Devices per room | 12 |
+| A socket that never says who it is | Closed after 10 seconds |
+| Dead connections | Pinged every 30 seconds; one that does not answer is dropped |
+| Names | Cleaned and cut to 20 characters; shown as text, never as markup |
+| Origins | Any by default (no cookies exist to steal); `ALLOWED_ORIGINS` restricts browsers to a list |
+
+The server validates every action through the game's own logic (section 4.1). A game that throws closes
+its room and no other. No personal data is stored: a name and what players type during a game exist only for
+the life of the room, and logs never contain names, clues or tokens.
 
 ## 7. The two hosts
 
 ### 7.1 Node.js host (`apps/server-node`)
 
-- One process: serves the client's static files, the HTTP API, and WebSocket rooms held in memory, with
-  ordinary timers for wake-ups.
-- Used for development, automated tests and any ordinary hosting (one container).
-- Rooms are lost when the process restarts. Acceptable for now (P-6).
+- One process: the HTTP API, the room WebSockets (the `ws` package) and the built website, on one port.
+  Rooms are held in memory and lost when the process restarts (P-6).
+- `RoomManager` feeds events to the engine and carries out its effects; it knows nothing of HTTP or
+  sockets, so it is tested with fake sockets and a fake clock. `http.ts` and `server.ts` are the thin layer
+  over `node:http` and `ws`.
+- The website is served from `apps/client/dist` with a content security policy that allows nothing remote
+  (`default-src 'self'`, WebSockets allowed), `nosniff`, long caching for hashed assets and none for the
+  page. Hidden files and anything outside that folder are never served. There is no fallback to the page:
+  routes are after the `#` (P-16).
+- Run it: `npm run dev:server` (runs the TypeScript directly with Node's type stripping, restarting on
+  changes) next to `npm run dev` (Vite proxies `/api` to it), or `npm run build` then `npm start` for the
+  single-file bundle `apps/server-node/dist/main.js`. TLS belongs to a reverse proxy; set `TRUST_PROXY=1`
+  behind one so limits use the real address.
+- Settings, as environment variables: `PORT` (8787), `HOST` (0.0.0.0), `CLIENT_DIST`, `ALLOWED_ORIGINS`
+  (comma-separated), `TRUST_PROXY`, `MAX_ROOMS`, `ROOMS_PER_ADDRESS_BURST`, `ROOMS_PER_ADDRESS_PER_MINUTE`,
+  `SOCKETS_PER_ADDRESS`, `UNKNOWN_ROOMS_PER_ADDRESS_BURST`.
+- Code that Node runs by stripping types cannot use constructor parameter properties
+  (`constructor(readonly x: T)`); ESLint refuses them in `packages/*` and `apps/server-*`.
 
 ### 7.2 Cloudflare host (`apps/server-cloudflare`)
 
@@ -338,10 +428,18 @@ workspaces. When the rooms Worker arrives (M4) its config moves to `apps/server-
   games are ported with the logic. Order-of-draws tests pin values computed by hand from the spec, and
   every important rule was checked by breaking it on purpose and seeing a test fail.
 - **Shell**: tested with a small fake game (`fake-game.ts`), so no shell test depends on a real game.
-- **Room engine**: tests feed events and check effects, with no network. One important check per game:
-  a view sent to a seat never contains another seat's secrets.
-- **Interface**: Playwright in Chromium at phone sizes, playing complete games.
-- **Multi-device**: several Playwright browser contexts in one room against the Node.js host.
+- **Room engine**: events in, effects out, with no sockets; the secrecy of what each seat is sent is checked
+  while a whole Le Curseur game is played through it.
+- **Node.js host**: real HTTP and WebSocket clients on a free port (a whole game, reconnecting, every limit,
+  origins, the static file server including path traversal), plus the manager with fake sockets.
+- **Remote session** (client): a fake socket and a manual timer: reconnection and its waits, out-of-order
+  messages, fatal and temporary errors.
+- **Interface**: Playwright in Chromium at phone sizes, playing complete games. The tests run against the
+  Node.js host, which serves the built website as in production.
+- **Multi-device**: several Playwright browser contexts, each a phone of its own, in one room on the Node.js
+  host: whole games with the guessing phone's WebSocket frames checked for the target, shared seats,
+  watching, reconnection (a socket cut on purpose), the host leaving, joining by code and by link, French,
+  and layout at four phone sizes.
 - **Cloudflare host**: run locally with Cloudflare's own tooling before each deployment.
 - **Android**: the build runs in the cloud environment (Android SDK installed by its setup script).
   Running the app needs an emulator or a phone, on the user's machine: the cloud has no KVM.

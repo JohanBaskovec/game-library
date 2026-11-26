@@ -1,15 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { Locale } from '@game-library/game-kit';
-  import {
-    DEFAULT_CONTENT_LOCALE,
-    MAX_NAME_LENGTH,
-    ROUNDS,
-    SCORE_BANDS,
-    leCurseur,
-    type Config,
-    type ConfigError,
-  } from '../logic/index.ts';
+  import { SCORE_BANDS, leCurseur, type Config } from '../logic/index.ts';
+  import { startingConfig } from './config.ts';
+  import ConfigEditor from './ConfigEditor.svelte';
   import type { T } from './types.ts';
 
   let {
@@ -28,28 +22,10 @@
     onResume: () => void;
   } = $props();
 
-  // The last settings used, or the defaults of the language. Read once: the menu then owns its fields.
-  const initial = untrack(() => ({
-    names: [
-      savedConfig?.teamNames[0] || t('menu.team1.default'),
-      savedConfig?.teamNames[1] || t('menu.team2.default'),
-    ],
-    rounds: savedConfig?.roundCount ?? ROUNDS.default,
-    contentLocale: savedConfig?.contentLocale ?? DEFAULT_CONTENT_LOCALE,
-  }));
-
-  let name0 = $state(initial.names[0] ?? '');
-  let name1 = $state(initial.names[1] ?? '');
-  let rounds = $state(initial.rounds);
-
-  const config = $derived(
-    leCurseur.normalizeConfig({
-      teamNames: [name0, name1],
-      roundCount: rounds,
-      contentLocale: initial.contentLocale,
-    }),
-  );
-  const error = $derived(leCurseur.validateConfig(config) as ConfigError | null);
+  // The last settings used, or the defaults of the language. Read once: the editor then owns the fields.
+  const initial = untrack(() => startingConfig(savedConfig, t));
+  let config = $state.raw<Config>(initial);
+  const invalid = $derived(leCurseur.validateConfig(config) !== null);
 
   const numbers = $derived(new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }));
   const bands = $derived(
@@ -58,13 +34,9 @@
     ).join(', '),
   );
 
-  function changeRounds(delta: number): void {
-    rounds = Math.min(ROUNDS.max, Math.max(ROUNDS.min, rounds + delta));
-  }
-
   function submit(event: SubmitEvent): void {
     event.preventDefault();
-    if (error === null) onStart(config);
+    if (!invalid) onStart(config);
   }
 </script>
 
@@ -75,56 +47,7 @@
   </div>
 
   <form class="form" novalidate onsubmit={submit}>
-    <label class="field">
-      <span class="field-label">{t('menu.team1')}</span>
-      <input
-        class="text-input seat-0"
-        type="text"
-        maxlength={MAX_NAME_LENGTH}
-        autocomplete="off"
-        enterkeyhint="next"
-        bind:value={name0}
-      />
-    </label>
-    <label class="field">
-      <span class="field-label">{t('menu.team2')}</span>
-      <input
-        class="text-input seat-1"
-        type="text"
-        maxlength={MAX_NAME_LENGTH}
-        autocomplete="off"
-        enterkeyhint="done"
-        bind:value={name1}
-      />
-    </label>
-
-    <div class="field" role="group" aria-labelledby="rounds-label">
-      <span class="field-label" id="rounds-label">{t('menu.rounds')}</span>
-      <div class="stepper">
-        <button
-          class="btn step"
-          type="button"
-          aria-label={t('menu.rounds.less')}
-          disabled={rounds <= ROUNDS.min}
-          onclick={() => changeRounds(-1)}
-        >
-          −
-        </button>
-        <output class="value" aria-live="polite">{rounds}</output>
-        <button
-          class="btn step"
-          type="button"
-          aria-label={t('menu.rounds.more')}
-          disabled={rounds >= ROUNDS.max}
-          onclick={() => changeRounds(1)}
-        >
-          +
-        </button>
-      </div>
-      <span class="hint">{t('menu.rounds.hint', { count: rounds * 2, rounds })}</span>
-    </div>
-
-    <p class="error" role="alert">{error ? t(`menu.error.${error}`) : ''}</p>
+    <ConfigEditor {t} value={initial} onchange={(next) => (config = next)} />
 
     <details class="rules">
       <summary>{t('menu.rules.title')}</summary>
@@ -145,7 +68,7 @@
       {#if canResume}
         <button class="btn secondary" type="button" onclick={onResume}>{t('menu.resume')}</button>
       {/if}
-      <button class="btn primary" type="submit" disabled={error !== null}>{t('menu.play')}</button>
+      <button class="btn primary" type="submit" disabled={invalid}>{t('menu.play')}</button>
     </div>
   </form>
 </section>
@@ -172,36 +95,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-  }
-
-  .seat-0 {
-    border-left: 8px solid var(--seat-0);
-  }
-
-  .seat-1 {
-    border-left: 8px solid var(--seat-1);
-  }
-
-  .stepper {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .step {
-    width: 56px;
-    padding: 0;
-    background: var(--surface);
-    color: var(--text);
-    border-color: var(--border);
-    font-size: 1.6rem;
-  }
-
-  .value {
-    min-width: 3ch;
-    text-align: center;
-    font-size: 1.8rem;
-    font-weight: 700;
   }
 
   .rules {

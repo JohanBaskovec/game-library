@@ -31,6 +31,7 @@ export function createFakeLogic(
     defaultConfig: () => null,
     normalizeConfig: (input) => (input === 'ok' ? null : null),
     validateConfig: () => null,
+    seatNames: () => ['A', 'B'],
     setup: () => ({ step: 0 }),
     apply(state, seat, action): Result<FakeState> {
       if (

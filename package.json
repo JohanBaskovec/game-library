@@ -12,7 +12,9 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @game-library/client",
-    "build": "npm run build -w @game-library/client",
+    "dev:server": "npm run dev -w @game-library/server-node",
+    "start": "npm run start -w @game-library/server-node",
+    "build": "npm run build --workspaces --if-present",
     "preview": "npm run preview -w @game-library/client",
     "lint": "eslint .",
     "format": "prettier --write .",

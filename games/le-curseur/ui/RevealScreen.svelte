@@ -13,6 +13,8 @@
   }: { view: CurseurView; t: T; locale: Locale; send: (action: unknown) => void } = $props();
 
   const last = $derived(view.turnNumber >= view.turnCount);
+  /** In a room the other team sees the result too, but only the guessing team moves on. */
+  const acting = $derived(view.seat === view.actingSeat);
 </script>
 
 <section class="screen">
@@ -33,9 +35,15 @@
   <p class="score">{scoreLine(t, locale, view.score.total)}</p>
 
   <div class="actions">
-    <button class="btn primary" type="button" onclick={() => send({ type: 'continue' })}>
-      {last ? t('reveal.seeRecap') : t('reveal.continue')}
-    </button>
+    {#if acting}
+      <button class="btn primary" type="button" onclick={() => send({ type: 'continue' })}>
+        {last ? t('reveal.seeRecap') : t('reveal.continue')}
+      </button>
+    {:else}
+      <p class="waiting" role="status">
+        {t('wait.continue', { team: view.teamNames[view.actingSeat] })}
+      </p>
+    {/if}
   </div>
 </section>
 
@@ -55,6 +63,12 @@
   }
 
   .score {
+    font-weight: 600;
+  }
+
+  .waiting {
+    text-align: center;
+    color: var(--muted);
     font-weight: 600;
   }
 

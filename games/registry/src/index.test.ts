@@ -1,6 +1,7 @@
 import { isValidGameId } from '@game-library/game-kit';
 import { describe, expect, it } from 'vitest';
 import { findGame, gameManifests } from './index.ts';
+import { findLogic, gameLogics } from './logics.ts';
 
 describe('game registry', () => {
   it('has unique, valid ids', () => {
@@ -16,5 +17,20 @@ describe('game registry', () => {
   it('finds a game by id and returns undefined for an unknown one', () => {
     expect(findGame('does-not-exist')).toBeUndefined();
     for (const game of gameManifests) expect(findGame(game.id)).toBe(game);
+  });
+
+  it('has the rules of every listed game, and no rules for a game that is not listed', () => {
+    expect(Object.keys(gameLogics).sort()).toEqual(gameManifests.map((game) => game.id).sort());
+    for (const game of gameManifests) {
+      const logic = findLogic(game.id);
+      expect(logic?.id).toBe(game.id);
+      expect(logic?.seatCount).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('does not find rules by names that merely exist on every object', () => {
+    for (const id of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) {
+      expect(findLogic(id)).toBeUndefined();
+    }
   });
 });

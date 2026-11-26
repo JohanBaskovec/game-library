@@ -9,6 +9,7 @@
   import { LocalSession } from '../lib/game/session.svelte.ts';
   import { createTranslator } from '../lib/i18n/core.ts';
   import { currentLocale, t } from '../lib/i18n.svelte.ts';
+  import { routeHref } from '../lib/router.svelte.ts';
   import { json } from '../lib/services/index.ts';
 
   type Stage =
@@ -159,6 +160,12 @@
         onStart={(config: unknown) => start(game, config)}
         onResume={() => resume(game)}
       />
+      <div class="rooms">
+        <a class="btn secondary" href={routeHref({ name: 'room-new', gameId })}>
+          {t('play.rooms')}
+        </a>
+        <p class="hint">{t('play.rooms.hint')}</p>
+      </div>
     {:else if stage.kind === 'playing' && gameT}
       {@const game = stage.game}
       {@const session = stage.session}
@@ -236,5 +243,12 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+  }
+
+  .rooms {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    text-align: center;
   }
 </style>

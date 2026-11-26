@@ -1,7 +1,18 @@
 <script lang="ts">
   import { gameManifests } from '@game-library/registry';
   import { currentLocale, t } from '../lib/i18n.svelte.ts';
-  import { routeHref } from '../lib/router.svelte.ts';
+  import { normalizeRoomCode } from '@game-library/room';
+  import { navigate, routeHref } from '../lib/router.svelte.ts';
+
+  let codeInput = $state('');
+  let codeError = $state(false);
+
+  function joinByCode(event: SubmitEvent): void {
+    event.preventDefault();
+    const code = normalizeRoomCode(codeInput);
+    codeError = code === null;
+    if (code !== null) navigate({ name: 'room', code });
+  }
 </script>
 
 <section>
@@ -31,6 +42,28 @@
       {/each}
     </ul>
   {/if}
+
+  <form class="join card" novalidate onsubmit={joinByCode}>
+    <h2>{t('picker.join.title')}</h2>
+    <label class="field">
+      <span class="field-label">{t('picker.join.label')}</span>
+      <input
+        class="text-input code"
+        type="text"
+        maxlength="9"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        enterkeyhint="go"
+        bind:value={codeInput}
+        oninput={() => (codeError = false)}
+      />
+    </label>
+    <p class="error" role="alert">{codeError ? t('picker.join.invalid') : ''}</p>
+    <button class="btn secondary" type="submit" disabled={codeInput.trim() === ''}>
+      {t('picker.join.button')}
+    </button>
+  </form>
 </section>
 
 <style>
@@ -54,6 +87,26 @@
 
   .empty p {
     color: var(--muted);
+  }
+
+  .join {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .join h2 {
+    font-size: 1.05rem;
+  }
+
+  .code {
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
   }
 
   .games {
