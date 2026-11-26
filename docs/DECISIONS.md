@@ -20,6 +20,8 @@ Dates are the day the decision was taken.
 | D-9 | Local play on several phones | Goes through the server, exactly like online play. Each phone needs an internet connection. Playing offline between phones is not planned. | 2026-11-26 |
 | D-10 | Native platforms | Android first. iOS later; the code stays iOS-compatible meanwhile (safe areas, no Android-only plugin). | 2026-11-26 |
 | D-11 | Server design | The room logic is plain TypeScript that knows nothing about its host. A Node.js host runs it for development, tests and ordinary hosting; a Cloudflare host (Workers + Durable Objects) runs the same code. | 2026-11-26 |
+| D-12 | Android application id | `fr.johanindustry.games`. It cannot change once the app is published. | 2026-11-26 |
+| D-13 | Forest Maze documentation | Its rules and specification are written from the code during the port; no other spec exists. | 2026-11-26 |
 
 ## Proposed by the agent, not yet confirmed
 
@@ -44,12 +46,13 @@ These are working defaults. They become decisions when the user confirms them, o
 
 ## Open questions
 
+Numbers are not reused: O-3 and O-4 were answered on 2026-11-26 (no single-player game is planned, so
+D-8 stands as written; O-4 became D-13).
+
 | # | Question | Needed by |
 |---|---|---|
-| O-1 | Name of the library, as shown in the app and the stores. Also the Android application id (for example `fr.johanbaskovec.games`, which cannot change after publication) and the website address. | M1 (application id), M4 (address) |
+| O-1 | Name of the library, as shown in the app and the stores ("Game Library" is used as a placeholder until then), and the website address. Links that open the app (M7) need a domain the user controls. | M4 (address), M7 (name) |
 | O-2 | Production hosting. D-11 keeps both options open. Cloudflare's free plan looks sufficient to start (see `ARCHITECTURE.md`, "Cloudflare host"). Confirm before the first deployment. | M4 |
-| O-3 | Will single-player games join the library later (a roguelike and a colony simulation were mentioned)? D-8 says every game is playable on several devices; a single-player game has no second seat. | Before the first such game |
-| O-4 | Forest Maze has no written rules or specification in its repository; its README refers to a spec that is not there. Is there one elsewhere, or should it be written from the code during the port? | M6 |
 | O-5 | Forest Maze's AI partner: single-device play only, or can it also fill an empty seat in a room? | M6 |
 | O-6 | English word list for Un Banger and English concept pairs for Le Curseur: who writes them, and when? | After M5 |
 | O-7 | Are game titles translated? "Le Curseur" and "Le Jeu Masterclass, Un Banger" are French names. | M2 |

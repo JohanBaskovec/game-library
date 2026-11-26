@@ -15,7 +15,7 @@ Milestones in order. Each one ends with something that can be run and checked. T
 | M7 | Android release | Store listing, privacy policy, signed build, links that open the app. | The app is installable from the store. |
 
 Needed from the user along the way: the open questions of `DECISIONS.md`, each marked with the milestone
-that needs it. The first is the Android application id (O-1), before M1.
+that needs it. None blocks M1.
 
 ## Later
 

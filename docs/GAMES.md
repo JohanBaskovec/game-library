@@ -87,5 +87,7 @@ The standalone games had strict constraints that the library replaces, and other
 - Device: sounds, vibration and wake lock go through the shell's device service.
 - Rooms: each player's device holds that player's set of actions; no secrets. The first real-time game
   in rooms, so the place where delay will be judged (P-14).
-- Open points: no written rules exist in the repository (O-4); the role of the AI partner in rooms (O-5).
+- Documents: none exist beyond the README. Write `rules.md` and `spec.md` from the code as part of the
+  port (D-13), before changing the logic, so the port has something to be checked against.
+- Open point: the role of the AI partner in rooms (O-5).
 - Interface text is English only today; French must be written.
