@@ -1,0 +1,90 @@
+/*
+ * Shared design tokens. Components use these variables and never hard-code colours or sizes, so
+ * games can theme themselves by overriding a few of them. Light and dark follow the system (P-13).
+ */
+:root {
+  --bg: #ffffff;
+  --surface: #f2f4f7;
+  --text: #15181d;
+  --muted: #5b6573;
+  --border: #d5dae1;
+  --accent: #2456d6;
+  --accent-text: #ffffff;
+  --focus: #1a73e8;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --radius: 0.75rem;
+  /* Minimum size of anything a finger must hit. */
+  --tap: 44px;
+  --content-width: 40rem;
+
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    'Noto Sans',
+    sans-serif;
+  font-size: 100%;
+  line-height: 1.45;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --surface: #20242b;
+    --text: #eef0f3;
+    --muted: #a3acb9;
+    --border: #363c46;
+    --accent: #7ba2ff;
+    --accent-text: #0b1020;
+    --focus: #8ab4f8;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  /* No double-tap zoom delay on buttons and links. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

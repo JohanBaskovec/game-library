@@ -1,0 +1,9 @@
+{
+  // Cloudflare Workers configuration for the website (static assets only, for now).
+  // The Worker name must match the name of the Worker in the Cloudflare dashboard.
+  "name": "game-library",
+  "compatibility_date": "2026-11-26",
+  "assets": {
+    "directory": "./apps/client/dist",
+  },
+}

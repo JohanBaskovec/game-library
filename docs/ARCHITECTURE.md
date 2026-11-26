@@ -64,6 +64,9 @@ games/
 docs/
 ```
 
+Created so far (M1): `apps/client`, `packages/game-kit` and `games/registry`. The rest is created when its
+milestone starts (see `ROADMAP.md`).
+
 Dependency rule, enforced by the TypeScript project setup: `logic` and `packages/*` may import only each
 other. `ui` and `apps/client` may import everything except the server apps. Server apps never import `ui`.
 
@@ -168,6 +171,17 @@ Games reach the device only through these, so that browser and native app behave
 - Android first. iOS-safe habits from day one: safe-area insets, no reliance on APIs iOS lacks (such as
   `navigator.vibrate`), no Android-only plugin without an iOS equivalent.
 
+### 5.5 Routing and browser targets
+
+- Screens are reached by hash routes (`#/`, `#/settings`, later `#/play/<id>` and `#/room/<code>`), parsed
+  by one function that sends unknown addresses to the picker (P-16). The tab bar shows the two top-level
+  screens; a game takes the whole screen while it runs.
+- The build is translated down to Chrome 100, Safari 15 and Firefox 100 (P-15), so modern syntax and CSS
+  can be written freely.
+- Light and dark colours come from CSS variables and follow the system setting (D-17).
+- Layout checks that hold today and are tested: no sideways scrolling from 320 px wide, the tab bar sits
+  at the bottom of the screen, every tap target is at least 44 px high, no request leaves the app.
+
 ## 6. Rooms
 
 ### 6.1 Model (P-3 to P-6)
@@ -258,6 +272,31 @@ Sources: [Durable Objects pricing](https://developers.cloudflare.com/durable-obj
 [Workers static assets](https://developers.cloudflare.com/workers/static-assets/),
 [Containers](https://developers.cloudflare.com/containers/).
 
+### 7.3 Deploying the website
+
+Today the website is static files, served by a Cloudflare Worker with static assets (P-18). The config is
+`wrangler.jsonc` at the repository root: Worker name `game-library`, files from `apps/client/dist`.
+There is no SPA fallback because routes live after the `#` (P-16): an unknown path is a plain 404.
+
+Manual: `npm run deploy` (after `npx wrangler login`), or `npm run deploy:preview` to upload a version
+without making it live. Checked here without a Cloudflare account: `wrangler deploy --dry-run` finds the
+files, and `wrangler dev` serves the page and its assets with the right content types.
+
+Automatic, from GitHub, with Cloudflare "Workers Builds" (dashboard, Settings, Build):
+
+| Field | Value |
+|---|---|
+| Worker name | `game-library`, exactly the `name` in `wrangler.jsonc` |
+| Root directory | empty (the repository root) |
+| Build command | `npm ci && npm run build` |
+| Deploy command | `npx wrangler deploy` |
+| Non-production branch command | `npx wrangler versions upload` |
+| Production branch | `main` |
+
+Not yet confirmed by a real build in the dashboard: how the root directory setting behaves with npm
+workspaces. When the rooms Worker arrives (M4) its config moves to `apps/server-cloudflare`, with
+`assets.directory` pointing at `../client/dist`, and the root directory setting moves with it.
+
 ## 8. Versions
 
 | Version | Changes when | Effect of a mismatch |
@@ -275,7 +314,8 @@ Sources: [Durable Objects pricing](https://developers.cloudflare.com/durable-obj
 - **Interface**: Playwright in Chromium at phone sizes, playing complete games.
 - **Multi-device**: several Playwright browser contexts in one room against the Node.js host.
 - **Cloudflare host**: run locally with Cloudflare's own tooling before each deployment.
-- **Android**: on an emulator or a phone, on a machine with the Android SDK.
+- **Android**: the build runs in the cloud environment (Android SDK installed by its setup script).
+  Running the app needs an emulator or a phone, on the user's machine: the cloud has no KVM.
 
 ## 10. Later, and deliberately not designed yet
 
