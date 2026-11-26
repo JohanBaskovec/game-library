@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@game-library/game-kit": "*"
+    "@game-library/game-kit": "*",
+    "@game-library/le-curseur": "*"
   }
 }

@@ -43,7 +43,7 @@ fixed when the first game is ported (milestone M2) and this document is then upd
 The two room rows are technically identical: same code, same joining flow. Every game supports rooms.
 Single-device play is declared per game; the three current games support it (D-8).
 
-## 3. Repository layout (P-1)
+## 3. Repository layout (D-14)
 
 ```
 apps/
@@ -54,18 +54,19 @@ packages/
   game-kit/            Game contract types, seeded random generator, shared pure helpers
   room/                Room engine and wire protocol types
 games/
-  <id>/
+  <id>/                One npm workspace per game: @game-library/<id>
+    manifest.ts        Title, tagline, languages: enough to list the game
     logic/             Rules and state. Plain TypeScript, compiled without DOM types.
     ui/                Svelte screens. Client only.
     content/           Word lists, concept pairs: data per content language
     i18n/              Interface text per language
     docs/              rules.md and spec.md
-  registry             The list of games: logic entries for the server, manifests for the client
+  registry/            The list of games (their manifests)
 docs/
 ```
 
-Created so far (M1): `apps/client`, `packages/game-kit` and `games/registry`. The rest is created when its
-milestone starts (see `ROADMAP.md`).
+Created so far (M1, M2): `apps/client`, `packages/game-kit`, `games/registry` and `games/le-curseur`. The
+rest is created when its milestone starts (see `ROADMAP.md`).
 
 Dependency rule, enforced by the TypeScript project setup: `logic` and `packages/*` may import only each
 other. `ui` and `apps/client` may import everything except the server apps. Server apps never import `ui`.
@@ -74,48 +75,65 @@ other. `ui` and `apps/client` may import everything except the server apps. Serv
 
 ### 4.1 Logic (plain TypeScript, D-5)
 
-Intended shape:
+The contract is `GameLogic` in `packages/game-kit/src/contract.ts`; the code is authoritative. Its shape:
 
 ```ts
-interface GameLogic<Config, State, Action, View> {
-  id: string;                    // "le-curseur"
-  rulesVersion: number;          // bumped when rules, draw order or content lists change
-  seats: SeatSpec;               // the sides of the game, e.g. two teams
-  singleDevice: boolean;         // can it be played on one shared phone?
-  contentLocales: Locale[];      // languages its word lists exist in
+interface GameLogic<Config, State, View extends BaseView> {
+  id: string;                 // "le-curseur"
+  rulesVersion: number;       // bumped when rules, draw order or content lists change
+  saveFormat: number;         // bumped when the shape of State changes
+  seatCount: number;          // the sides of the game, e.g. two teams
 
-  defaultConfig: Config;
-  normalizeConfig(input: unknown): Config;             // never trusts its input
-  setup(config: Config, seed: string): State;          // same seed and config, same game
+  defaultConfig(): Config;
+  normalizeConfig(input: unknown): Config;        // a well-formed config from untrusted data
+  validateConfig(config: Config): string | null;  // an error code, or null
+  setup(config: Config, seed: string): State;     // same config and seed, same game; throws if invalid
   apply(state: State, seat: SeatId, action: unknown, now: number): Result<State>;
-  view(state: State, seat: SeatId): View;              // everything this seat may see, nothing more
-  wakeAt(state: State): number | null;                 // next moment the game needs to be woken, if any
+  view(state: State, seat: SeatId): View;         // everything this seat may see, nothing more
+  activeSeat(state: State): SeatId;               // the seat expected to act
+  isOver(state: State): boolean;
+  restore(input: unknown): State | null;          // checks saved data and returns it as a state
 }
+
+interface BaseView { secret: boolean }  // does this view show something the other seats must not see?
 ```
+
+A game's own action type is not part of the contract: actions arrive as untrusted `unknown` and each game
+checks them inside `apply`. The `wakeAt` function for timed games (the next moment the game needs to be
+woken) is added with the first real-time game, Forest Maze (M6).
 
 Properties every logic module has:
 
 - **Pure and deterministic.** No DOM, storage, network, `Date.now()` or `Math.random()`. All randomness
   comes from a seeded generator whose position is part of the state. Time enters only through `now`.
-- **State is plain JSON data.** It can be saved, restored and moved between server instances.
+- **State is plain JSON data.** It can be saved, restored and moved between server instances. `apply`
+  returns a new state and never edits the one it is given.
 - **`apply` validates.** It rejects an action from the wrong seat, at the wrong time or with bad
   content, and returns an error code, not a sentence. The interface translates codes.
-- **Deadlines, not countdowns.** A timed game stores the moment something ends and reports it through
-  `wakeAt`. Nothing ticks on the server while players are idle.
+- **Deadlines, not countdowns.** A timed game stores the moment something ends. Nothing ticks on the
+  server while players are idle.
 - **No hand-off phases.** The old single-phone games model "pass the phone" as game phases. In the
-  library the logic only says which seats may act; passing the phone is the shell's job (section 5.3).
+  library the logic only says which seat must act (`activeSeat`) and whether a view is `secret`; passing
+  the phone is the shell's job (section 5.3).
+- **Untrusted saves.** `restore` checks everything about a saved state, including that its turns are
+  consistent with each other, and returns a copy.
 
 ### 4.2 Interface (Svelte, D-5)
 
-- A game's screens are Svelte components that receive a session: the current `View`, the seats this
-  device controls, and a `send(action)` function. They never see `State`.
-- The same components serve all modes. They may adapt to the mode (for example "waiting for the other
-  team" in a room where the single-device mode would pass the phone).
+- A game's `ui/index.ts` exports `clientGame = { logic, messages, Menu, Screen, handoff }`. The shell
+  finds it by its place (`games/<id>/ui/index.ts`) and loads it on demand when the player opens the game,
+  so the picker stays light as the library grows. The shell never names a game.
+- `Menu` is the settings screen before a game. `Screen` shows the playing screens and receives the
+  current `View`, a `send(action)` function, a translate function, the language and the last refused
+  action. It never sees `State`. `handoff(view, t, locale)` returns the text of the shell's hand-off
+  screen, which must contain nothing secret.
+- A game never imports shell code: everything reaches it through these props. Shared looks come from the
+  CSS variables and building-block classes in `app.css` (buttons, fields, seat colours).
+- The same components will serve all modes. Screens for a seat that is not acting ("waiting for the other
+  team") arrive with rooms (M3).
 - **Canvas games** use Svelte for screens and the HUD, and one Svelte component that owns the `<canvas>`,
   sizes it, and runs a plain `requestAnimationFrame` drawing loop written in ordinary TypeScript. The
   loop reads the latest view; it does not go through Svelte's reactivity for each frame.
-- Each game's interface is loaded on demand when the player opens it, so the picker stays light as the
-  library grows.
 
 ### 4.3 Content and translations (D-6)
 
@@ -151,13 +169,22 @@ Games reach the device only through these, so that browser and native app behave
 
 ### 5.3 Single-device play and secrets
 
-- The local session runs the logic on the device and shows the view of the seat that is acting.
-- Whenever the displayed seat changes, the shell shows a **hand-off screen** first ("Team X's turn" and
-  a "Ready" button). It shows nothing secret.
-- The game is saved after every action. A resumed game always reopens on a hand-off screen, never
-  directly on a view with secrets.
+- `LocalSession` runs the logic on the device and shows the view of the seat that must act.
+- **When the shell shows a hand-off screen** (`needsHandoff`): before the first screen of a game and after
+  a resume; whenever the acting seat changes; and whenever a secret view follows one that was not secret,
+  even when the same seat holds the phone, because people look at a result and would see the next secret.
+  A view says whether it is secret through `BaseView.secret`. There is no hand-off at the very end of a
+  game: the last screen is public.
+- The hand-off screen shows only what the game puts in `handoff()`: the round, the team, its role, a
+  warning and the score. Never a target, a clue or a concept.
+- The game is saved after every action, as an envelope that holds the game id, its `rulesVersion` and
+  `saveFormat`, and the state (`gl.game.<id>.save`). A save is ignored when any version differs or when
+  the game's own `restore` refuses it. It is deleted when the game ends or the player quits. Leaving the
+  screen any other way keeps it for **Resume**, and a resumed game always reopens on a hand-off, never on
+  a view with secrets. The settings used last are kept in `gl.game.<id>.config`.
+- "Play again" and "Menu" at the end of a game belong to the shell; the game only draws its recap.
 - A game with its own way of sharing the phone (Forest Maze's "Pass" button) uses the shell's hand-off
-  component where it fits and its own flow otherwise; the two rules above still hold.
+  component where it fits and its own flow otherwise; the rules above still hold.
 
 ### 5.4 Native app (Capacitor, D-10)
 
@@ -305,10 +332,12 @@ workspaces. When the rooms Worker arrives (M4) its config moves to `apps/server-
 | `rulesVersion` (per game) | Rules, random draw order or content lists change | Same, for that game only; old saved games of that game are discarded |
 | Save format (per game) | The shape of the saved state changes | The saved game is ignored |
 
-## 9. Testing (P-9)
+## 9. Testing (D-16)
 
 - **Logic**: unit tests under Node.js, including seeded whole-game runs. Existing tests of the original
-  games are ported with the logic.
+  games are ported with the logic. Order-of-draws tests pin values computed by hand from the spec, and
+  every important rule was checked by breaking it on purpose and seeing a test fail.
+- **Shell**: tested with a small fake game (`fake-game.ts`), so no shell test depends on a real game.
 - **Room engine**: tests feed events and check effects, with no network. One important check per game:
   a view sent to a seat never contains another seat's secrets.
 - **Interface**: Playwright in Chromium at phone sizes, playing complete games.

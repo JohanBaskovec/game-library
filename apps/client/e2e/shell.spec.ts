@@ -9,10 +9,10 @@ async function noHorizontalScroll(page: Page): Promise<boolean> {
 }
 
 test.describe('English device', () => {
-  test('opens on the empty game picker', async ({ page }) => {
+  test('opens on the game picker', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Games' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'No games yet' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Le Curseur/ })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(page).toHaveTitle('Game Library');
   });
@@ -46,7 +46,9 @@ test.describe('French device', () => {
   test('follows the device language', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Jeux' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Pas encore de jeux' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Le Curseur/ })).toContainText(
+      'Faites deviner une position',
+    );
     await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
     await expect(page).toHaveTitle('Bibliothèque de jeux');
   });
