@@ -54,6 +54,7 @@ export default defineConfig(
     '**/node_modules/**',
     '**/dist/**',
     '**/coverage/**',
+    '.wrangler/**',
     'apps/client/android/**',
     'apps/client/playwright-report/**',
     'apps/client/test-results/**',

@@ -46,6 +46,7 @@ These are working defaults. They become decisions when the user confirms them, o
 | P-15 | Browser and Android targets | The build targets Chrome 100, Safari 15 and Firefox 100, and newer syntax and CSS are translated down to them. The Android app needs Android 7 (API 24) or newer and targets API 36, the Capacitor 8 defaults. | The iOS app's web view is as old as the phone's Safari; Safari 15 covers iPhones back to 2017. Revisit when a feature needs something newer. |
 | P-16 | Routing | Hash routes (`#/settings`). | Work on any static host, under a sub-path, in the native app and on Cloudflare with no server rewriting, and the Android back button follows the history by default. |
 | P-17 | Version pins | TypeScript stays on 6.0.x until `typescript-eslint` and `svelte-check` support 7. Playwright is pinned to the version of the browser preinstalled in the cloud environment. Versions are exact in `package.json`. | Reasons are listed in `CLAUDE.md`. |
+| P-18 | Website deployment | Cloudflare Workers with static assets, not Pages, configured by `wrangler.jsonc` at the repository root; automatic deploys from GitHub with Workers Builds, set up as in `ARCHITECTURE.md` section 7.3. | Cloudflare recommends Workers for new projects, and the rooms (M4) will be a Worker in the same Cloudflare project. |
 
 ## Open questions
 

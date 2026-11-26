@@ -34,6 +34,8 @@ npm run typecheck      # svelte-check for the client, tsc for the packages
 npm test               # Vitest: a "logic" project (no DOM) and a "client" project (jsdom)
 npm run test:e2e       # Playwright: builds, serves, and drives the app at four phone sizes
 npm run android:build  # build the web app, cap sync, Gradle assembleDebug
+npm run deploy         # build, then deploy the website to Cloudflare (needs `wrangler login`)
+npm run deploy:preview # build, then upload a preview version without making it live
 ```
 
 The debug APK is `apps/client/android/app/build/outputs/apk/debug/app-debug.apk`; CI uploads it as an
@@ -49,6 +51,7 @@ Tool versions are pinned exactly in the `package.json` files (P-12):
 | Playwright | 1.63.0 | Same version as the browser preinstalled in the cloud environment |
 | Capacitor | 8.6.3 | Android minimum is API 24 (Android 7), target API 36 |
 | ESLint / Prettier | 10.15.0 / 3.10.1 | |
+| Wrangler | 4.168.0 | Cloudflare CLI; the website's config is `wrangler.jsonc` at the repository root |
 
 Android builds in the cloud environment: `ANDROID_HOME` is `/opt/android-sdk`. The environment's proxy
 limits simultaneous connections, so a first Gradle build can fail with `429 Too Many Requests` while

@@ -272,6 +272,31 @@ Sources: [Durable Objects pricing](https://developers.cloudflare.com/durable-obj
 [Workers static assets](https://developers.cloudflare.com/workers/static-assets/),
 [Containers](https://developers.cloudflare.com/containers/).
 
+### 7.3 Deploying the website
+
+Today the website is static files, served by a Cloudflare Worker with static assets (P-18). The config is
+`wrangler.jsonc` at the repository root: Worker name `game-library`, files from `apps/client/dist`.
+There is no SPA fallback because routes live after the `#` (P-16): an unknown path is a plain 404.
+
+Manual: `npm run deploy` (after `npx wrangler login`), or `npm run deploy:preview` to upload a version
+without making it live. Checked here without a Cloudflare account: `wrangler deploy --dry-run` finds the
+files, and `wrangler dev` serves the page and its assets with the right content types.
+
+Automatic, from GitHub, with Cloudflare "Workers Builds" (dashboard, Settings, Build):
+
+| Field | Value |
+|---|---|
+| Worker name | `game-library`, exactly the `name` in `wrangler.jsonc` |
+| Root directory | empty (the repository root) |
+| Build command | `npm ci && npm run build` |
+| Deploy command | `npx wrangler deploy` |
+| Non-production branch command | `npx wrangler versions upload` |
+| Production branch | `main` |
+
+Not yet confirmed by a real build in the dashboard: how the root directory setting behaves with npm
+workspaces. When the rooms Worker arrives (M4) its config moves to `apps/server-cloudflare`, with
+`assets.directory` pointing at `../client/dist`, and the root directory setting moves with it.
+
 ## 8. Versions
 
 | Version | Changes when | Effect of a mismatch |
