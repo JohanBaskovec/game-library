@@ -1,4 +1,11 @@
-export type { BaseView, GameLogic, Localized, Result, SeatId } from './contract.ts';
+export type {
+  BaseView,
+  ErasedGameLogic,
+  GameLogic,
+  Localized,
+  Result,
+  SeatId,
+} from './contract.ts';
 export { DEFAULT_LOCALE, LOCALES, isLocale } from './locale.ts';
 export type { Locale, ReadonlyLocales } from './locale.ts';
 export { isValidGameId } from './manifest.ts';

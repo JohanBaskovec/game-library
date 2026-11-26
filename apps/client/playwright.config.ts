@@ -17,7 +17,7 @@ export default defineConfig({
   retries: 0,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL: `http://127.0.0.1:${PORT}`,
     locale: 'en-US',
     trace: 'off',
   },
@@ -30,10 +30,21 @@ export default defineConfig({
       hasTouch: true,
     },
   })),
+  // The tests run against the Node.js host: it serves the built website and the rooms, as in production.
   webServer: {
-    command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
-    url: `http://localhost:${PORT}`,
+    command:
+      'npm run build -w @game-library/client -w @game-library/server-node && npm run start -w @game-library/server-node',
+    url: `http://127.0.0.1:${PORT}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      PORT: String(PORT),
+      HOST: '127.0.0.1',
+      // Many tests make rooms from the same address: lift the limits that protect a real server.
+      ROOMS_PER_ADDRESS_BURST: '100000',
+      ROOMS_PER_ADDRESS_PER_MINUTE: '100000',
+      SOCKETS_PER_ADDRESS: '100000',
+      UNKNOWN_ROOMS_PER_ADDRESS_BURST: '100000',
+    },
   },
 });

@@ -43,7 +43,7 @@ name very large in the team colour, the role ("Your turn to give the clue" or "Y
 warning for the giver that the other team must not see the next screen, the shared score, and **Ready**.
 It never shows the target, the clue or the concepts.
 
-The shell shows it before the first screen of a game, after a resume, whenever the acting seat changes,
+On one phone, the shell shows it before the first screen of a game, after a resume, whenever the acting seat changes,
 and whenever a secret view follows a view that was not secret (see section 3).
 
 ### 2.3 Give the clue
@@ -114,6 +114,21 @@ A view is flagged `secret` when it shows the target before the result. On one ph
 hand-off before a view when the acting seat changes, or when the view is secret and the previous one was
 not. This reproduces the original behaviour: after the result the same team keeps the phone but gets a
 hand-off before seeing its next target (decision D-5 below).
+
+### Rooms (several phones)
+
+In a room each team has its own phone (or several), and each phone is shown the view of its seat. There is
+no hand-off. The views are those of the table above, so a phone only ever receives what its seat may see:
+the guessing team is never sent the target before the result.
+
+- While the other team acts, a phone shows a waiting screen: "Waiting for {team} to give a clue…" (nothing
+  else), or, for the giving team while the other guesses, the clue, the ruler with the target and its zones,
+  and "Waiting for {team} to guess…".
+- At the result both teams see it, but only the guessing team has the **Continue** button; the other phone
+  says it is waiting.
+- The host sets the teams' names and the number of rounds in the lobby, with the same fields as the menu.
+  The names appear on the seats as soon as they are typed.
+- At the recap, the host can take everyone back to the lobby for another game; the seats are kept.
 
 ## 4. Data
 

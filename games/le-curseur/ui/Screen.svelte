@@ -5,6 +5,7 @@
   import GuessScreen from './GuessScreen.svelte';
   import RecapScreen from './RecapScreen.svelte';
   import RevealScreen from './RevealScreen.svelte';
+  import WatchScreen from './WatchScreen.svelte';
   import type { T } from './types.ts';
 
   let {
@@ -20,7 +21,9 @@
   } = $props();
 </script>
 
-{#if view.phase === 'give'}
+{#if (view.phase === 'give' || view.phase === 'guess') && view.seat !== view.actingSeat}
+  <WatchScreen {view} {t} />
+{:else if view.phase === 'give'}
   <GiveScreen {view} {t} {send} />
 {:else if view.phase === 'guess'}
   <GuessScreen {view} {t} {send} />

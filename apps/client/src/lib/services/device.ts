@@ -9,6 +9,12 @@ export interface Device {
   vibrate(milliseconds: number): void;
   /** Keep the screen on while a game is running. */
   keepAwake(on: boolean): Promise<void>;
+  /** Puts text on the clipboard. False when the device does not allow it. */
+  copyText(text: string): Promise<boolean>;
+  /** Can the device's own sharing sheet be opened? */
+  canShare(): boolean;
+  /** Opens the sharing sheet. False when it is not available or the player closed it. */
+  share(data: { title: string; text: string; url: string }): Promise<boolean>;
 }
 
 interface WakeLockSentinelLike {
@@ -27,6 +33,8 @@ interface DocumentLike {
 interface NavigatorLike {
   vibrate?: (pattern: number) => boolean;
   wakeLock?: WakeLockLike;
+  clipboard?: { writeText(text: string): Promise<void> };
+  share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
 }
 
 export function createWebDevice(
@@ -73,6 +81,27 @@ export function createWebDevice(
       wanted = on;
       await (on ? acquire() : release());
     },
+    async copyText(text) {
+      try {
+        if (!nav?.clipboard) return false;
+        await nav.clipboard.writeText(text);
+        return true;
+      } catch {
+        return false; // Refused: not a secure page, or no permission.
+      }
+    },
+    canShare() {
+      return typeof nav?.share === 'function';
+    },
+    async share(data) {
+      try {
+        if (typeof nav?.share !== 'function') return false;
+        await nav.share(data);
+        return true;
+      } catch {
+        return false; // The player closed the sheet, or sharing failed.
+      }
+    },
   };
 }
 
@@ -83,6 +112,9 @@ export function createNativeDevice(web: Device = createWebDevice()): Device {
       Haptics.vibrate({ duration: milliseconds }).catch(() => {});
     },
     keepAwake: web.keepAwake,
+    copyText: web.copyText,
+    canShare: web.canShare,
+    share: web.share,
   };
 }
 

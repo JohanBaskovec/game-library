@@ -23,6 +23,13 @@ const BROWSER_GLOBALS = [
   'performance',
 ];
 
+/** Node runs this code directly by stripping types, which cannot handle `constructor(readonly x: T)`. */
+const NO_PARAMETER_PROPERTIES = {
+  selector: 'TSParameterProperty',
+  message:
+    'Declare the field and assign it in the constructor (not supported by Node type stripping).',
+};
+
 const logicPurity = {
   'no-restricted-globals': ['error', ...BROWSER_GLOBALS],
   'no-restricted-properties': [
@@ -36,6 +43,7 @@ const logicPurity = {
       selector: "NewExpression[callee.name='Date'][arguments.length=0]",
       message: 'Time is passed in as an input.',
     },
+    NO_PARAMETER_PROPERTIES,
   ],
   'no-restricted-imports': [
     'error',
@@ -83,5 +91,10 @@ export default defineConfig(
     files: ['packages/*/src/**/*.ts', 'games/*/logic/**/*.ts'],
     ignores: ['**/*.test.ts'],
     rules: logicPurity,
+  },
+  {
+    // Servers run as plain Node.js: type stripping applies, and the platform is theirs to use.
+    files: ['apps/server-*/src/**/*.ts'],
+    rules: { 'no-restricted-syntax': ['error', NO_PARAMETER_PROPERTIES] },
   },
 );

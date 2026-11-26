@@ -18,7 +18,9 @@
     "@capacitor/haptics": "8.0.2",
     "@capacitor/preferences": "8.0.1",
     "@game-library/game-kit": "*",
-    "@game-library/registry": "*"
+    "@game-library/registry": "*",
+    "@game-library/room": "*",
+    "qrcode-generator": "2.0.4"
   },
   "devDependencies": {
     "@capacitor/cli": "8.6.3",

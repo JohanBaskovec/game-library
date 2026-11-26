@@ -38,6 +38,12 @@ export interface GameLogic<Config, State, View extends BaseView> {
   normalizeConfig(input: unknown): Config;
   /** An error code when the config cannot start a game, otherwise null. */
   validateConfig(config: Config): string | null;
+  /**
+   * What each seat is called in this config (team names, say), one entry per seat. An entry is the
+   * players' own text, so it is not translated; it can be empty, and the interface then uses a generic
+   * name such as "Seat 1".
+   */
+  seatNames(config: Config): readonly string[];
 
   /** Starts a game. Throws if the config is invalid. The same config and seed give the same game. */
   setup(config: Config, seed: string): State;
@@ -54,6 +60,13 @@ export interface GameLogic<Config, State, View extends BaseView> {
   /** Checks untrusted saved data and returns it as a state, or null when it is not usable. */
   restore(input: unknown): State | null;
 }
+
+/**
+ * A game with its types erased, for code that runs any game (the room engine, the hosts). Each game is
+ * fully typed on its own side; this is the one place where the generics are given up, by a cast at the
+ * registry.
+ */
+export type ErasedGameLogic = GameLogic<unknown, unknown, BaseView>;
 
 /** Text per interface language. A missing language is a type error. */
 export type Localized = Readonly<Record<Locale, string>>;
