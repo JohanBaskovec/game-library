@@ -89,7 +89,8 @@ export default defineConfig(
   {
     // Logic and shared packages (CLAUDE.md rule 1). Tests may use the platform freely.
     files: ['packages/*/src/**/*.ts', 'games/*/logic/**/*.ts'],
-    ignores: ['**/*.test.ts'],
+    // Test support (real sockets, fetch, timers) is not game logic.
+    ignores: ['**/*.test.ts', 'packages/host-conformance/**'],
     rules: logicPurity,
   },
   {

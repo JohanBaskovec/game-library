@@ -1,6 +1,5 @@
 import path from 'node:path';
-import { gameManifests } from '@game-library/registry';
-import { findLogic } from '@game-library/registry/logics';
+import { buildCatalog, findLogic } from '@game-library/registry/logics';
 import { startServer } from './server.ts';
 
 function numberFromEnv(name: string, fallback: number): number {
@@ -37,20 +36,7 @@ const server = await startServer({
     unknownRoomsPerAddressBurst: numberFromEnv('UNKNOWN_ROOMS_PER_ADDRESS_BURST', 20),
   },
   env: { game: findLogic },
-  catalog: gameManifests.flatMap((manifest) => {
-    const logic = findLogic(manifest.id);
-    return logic
-      ? [
-          {
-            id: manifest.id,
-            rulesVersion: logic.rulesVersion,
-            seatCount: logic.seatCount,
-            singleDevice: manifest.singleDevice,
-            contentLocales: manifest.contentLocales,
-          },
-        ]
-      : [];
-  }),
+  catalog: buildCatalog(),
   log,
 });
 

@@ -1,7 +1,7 @@
 import { isValidGameId } from '@game-library/game-kit';
 import { describe, expect, it } from 'vitest';
 import { findGame, gameManifests } from './index.ts';
-import { findLogic, gameLogics } from './logics.ts';
+import { buildCatalog, findLogic, gameLogics } from './logics.ts';
 
 describe('game registry', () => {
   it('has unique, valid ids', () => {
@@ -31,6 +31,18 @@ describe('game registry', () => {
   it('does not find rules by names that merely exist on every object', () => {
     for (const id of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) {
       expect(findLogic(id)).toBeUndefined();
+    }
+  });
+
+  it('builds the catalog a server publishes: one entry per game, with the versions of its rules', () => {
+    const catalog = buildCatalog();
+    expect(catalog.map((entry) => entry.id).sort()).toEqual(
+      gameManifests.map((game) => game.id).sort(),
+    );
+    for (const entry of catalog) {
+      const logic = findLogic(entry.id);
+      expect(entry.rulesVersion).toBe(logic?.rulesVersion);
+      expect(entry.seatCount).toBe(logic?.seatCount);
     }
   });
 });

@@ -2,14 +2,16 @@ import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { Duplex } from 'node:stream';
 import {
   LIMITS,
+  KeyedLimiter,
   createRateLimiter,
   normalizeRoomCode,
+  type CatalogEntry,
   type RoomEnv,
   type ServerMessage,
 } from '@game-library/room';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { clientAddress, createRequestListener, originAllowed, type CatalogEntry } from './http.ts';
-import { Counter, KeyedLimiter } from './limits.ts';
+import { clientAddress, createRequestListener, originAllowed } from './http.ts';
+import { Counter } from './limits.ts';
 import { RoomManager, systemClock, type Clock } from './rooms.ts';
 
 export interface ServerOptions {

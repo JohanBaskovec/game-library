@@ -2,17 +2,16 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
-import { LIMITS, PROTOCOL_VERSION } from '@game-library/room';
-import type { KeyedLimiter } from './limits.ts';
+import {
+  MAX_REQUEST_BYTES,
+  catalogReply,
+  createRoomReply,
+  createRoomStatus,
+  parseCreateRoomRequest,
+  type CatalogEntry,
+  type KeyedLimiter,
+} from '@game-library/room';
 import type { Clock, RoomManager } from './rooms.ts';
-
-export interface CatalogEntry {
-  readonly id: string;
-  readonly rulesVersion: number;
-  readonly seatCount: number;
-  readonly singleDevice: boolean;
-  readonly contentLocales: readonly string[];
-}
 
 export interface HttpOptions {
   readonly manager: RoomManager;
@@ -26,8 +25,6 @@ export interface HttpOptions {
   readonly createLimiter: KeyedLimiter;
   readonly clock: Clock;
 }
-
-const MAX_BODY_BYTES = 8 * 1024;
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',
@@ -49,7 +46,7 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
  * What the page may load. Everything comes from the site itself; the page may open WebSockets to
  * rooms. Nothing remote, in line with CLAUDE.md rule 5.
  */
-const CONTENT_SECURITY_POLICY = [
+export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self'",
@@ -59,6 +56,9 @@ const CONTENT_SECURITY_POLICY = [
   "form-action 'none'",
   "frame-ancestors 'none'",
 ].join('; ');
+
+/** Files of the built website that configure Cloudflare's hosting. Another host must not publish them. */
+const CONFIGURATION_FILES = ['_headers', '_redirects'];
 
 /** The address of the client. Behind a proxy it is the first address the proxy reports. */
 export function clientAddress(request: IncomingMessage, trustProxy: boolean): string {
@@ -125,7 +125,7 @@ function readJson(request: IncomingMessage): Promise<Body> {
     };
     request.on('data', (chunk: Buffer) => {
       size += chunk.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > MAX_REQUEST_BYTES) {
         chunks.length = 0;
         finish({ ok: false, reason: 'too-large' });
         request.pause();
@@ -154,7 +154,9 @@ async function handleCreateRoom(
   }
   const address = clientAddress(request, options.trustProxy);
   if (!options.createLimiter.allow(address, options.clock.now())) {
-    return sendJson(request, response, options, 429, { error: 'rate-limited' });
+    return sendJson(request, response, options, createRoomStatus('rate-limited'), {
+      error: 'rate-limited',
+    });
   }
 
   const read = await readJson(request);
@@ -162,32 +164,20 @@ async function handleCreateRoom(
     // Answer, then drop the connection: the rest of the body is not wanted.
     response.on('finish', () => request.destroy());
     response.setHeader('connection', 'close');
-    return sendJson(request, response, options, 413, { error: 'too-large' });
+    return sendJson(request, response, options, createRoomStatus('too-large'), {
+      error: 'too-large',
+    });
   }
-  const body = read.ok ? read.value : undefined;
-  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
-    return sendJson(request, response, options, 400, { error: 'bad-request' });
-  }
-  const { gameId, rules, config } = body as Record<string, unknown>;
-  if (typeof gameId !== 'string' || (rules !== undefined && typeof rules !== 'number')) {
-    return sendJson(request, response, options, 400, { error: 'bad-request' });
-  }
+  const parsed = read.ok ? parseCreateRoomRequest(read.value) : null;
+  if (!parsed) return sendJson(request, response, options, 400, { error: 'bad-request' });
 
-  const result = options.manager.create({
-    gameId,
-    ...(rules === undefined ? {} : { rules: rules as number }),
-    config,
-  });
+  const result = options.manager.create(parsed);
   if (!result.ok) {
-    const status =
-      result.error === 'unknown-game' ? 404 : result.error === 'rules-mismatch' ? 409 : 503;
-    return sendJson(request, response, options, status, { error: result.error });
+    return sendJson(request, response, options, createRoomStatus(result.error), {
+      error: result.error,
+    });
   }
-  sendJson(request, response, options, 201, {
-    code: result.code,
-    token: result.token,
-    protocol: PROTOCOL_VERSION,
-  });
+  sendJson(request, response, options, 201, createRoomReply(result.code, result.token));
 }
 
 async function serveStatic(
@@ -207,8 +197,14 @@ async function serveStatic(
   }
   if (pathname.includes('\0'))
     return sendJson(request, response, options, 400, { error: 'bad-request' });
-  // Hidden files and folders are never served.
-  if (pathname.split('/').some((segment) => segment.startsWith('.'))) return notFound();
+  // Hidden files and folders are never served, nor the files that only configure Cloudflare.
+  if (
+    pathname
+      .split('/')
+      .some((segment) => segment.startsWith('.') || CONFIGURATION_FILES.includes(segment))
+  ) {
+    return notFound();
+  }
 
   const base = path.resolve(root);
   let file = path.resolve(base, pathname === '/' ? 'index.html' : `.${pathname}`);
@@ -272,11 +268,7 @@ export function createRequestListener(
           });
         }
         if (pathname === '/api/catalog' && (method === 'GET' || method === 'HEAD')) {
-          return sendJson(request, response, options, 200, {
-            protocol: PROTOCOL_VERSION,
-            limits: { maxDevices: LIMITS.maxDevices, maxNameLength: LIMITS.maxNameLength },
-            games: options.catalog,
-          });
+          return sendJson(request, response, options, 200, catalogReply(options.catalog));
         }
         if (pathname === '/api/rooms' && method === 'POST') {
           return handleCreateRoom(request, response, options);

@@ -1,4 +1,12 @@
 export {
+  MAX_REQUEST_BYTES,
+  catalogReply,
+  createRoomReply,
+  createRoomStatus,
+  parseCreateRoomRequest,
+} from './api.ts';
+export type { CatalogEntry, CreateRoomRequest } from './api.ts';
+export {
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
   generateRoomCode,
@@ -7,8 +15,8 @@ export {
 export { createRoom, restoreRoom, step } from './engine.ts';
 export type { RoomEffect, RoomEvent, RoomInit, StepContext, StepResult } from './engine.ts';
 export { LIMITS, PROTOCOL_VERSION, parseClientMessage } from './protocol.ts';
-export { createRateLimiter } from './ratelimit.ts';
-export type { RateLimiter } from './ratelimit.ts';
+export { KeyedLimiter, createRateLimiter, fullBucket, takeFromBucket } from './ratelimit.ts';
+export type { Bucket, BucketOptions, RateLimiter } from './ratelimit.ts';
 export type {
   ClientMessage,
   ErrorCode,

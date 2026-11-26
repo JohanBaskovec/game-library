@@ -14,11 +14,14 @@ The first three games already exist as standalone vanilla HTML/JavaScript reposi
 
 ## Status
 
-**Milestones M1 (skeleton), M2 (Le Curseur on one phone) and M3 (rooms) are done**: the client shell, the
+**Milestones M1 (skeleton), M2 (Le Curseur on one phone) and M3 (rooms) are done, and M4 is built**: the client shell, the
 services, the game contract, the first game, the room engine, the Node.js server and the room screens
 (lobby, QR code, join, reconnect), with their tests and CI. The Android build is verified; running the app
-on a device is still for the user to confirm. Next is M4 in [`docs/ROADMAP.md`](docs/ROADMAP.md): the
-Cloudflare host and the first deployment. Do not start it before the user asks.
+on a device is still for the user to confirm. M4 added the Cloudflare host (a Worker, one Durable Object per
+room and one per address for the limits), tested on Cloudflare's runtime with `wrangler dev`, and the
+version check between app and server. The first deployment needs the user's Cloudflare account and is still
+to be done and checked by the user. Next is M5 (Un Banger) in [`docs/ROADMAP.md`](docs/ROADMAP.md): do not
+start it before the user asks.
 
 ## Commands
 
@@ -33,12 +36,13 @@ npm run check          # lint + format check + typecheck + unit tests + build (w
 npm run lint           # ESLint, including the logic-purity rules of rule 1
 npm run format         # Prettier (Markdown is left alone: its tables are formatted by hand)
 npm run typecheck      # svelte-check for the client, tsc for the packages
-npm test               # Vitest: "logic" (no DOM), "server" (real sockets) and "client" (jsdom) projects
+npm test               # Vitest: "logic" (no DOM), "server" (real sockets; the Cloudflare tests start `wrangler dev`)
+                       # and "client" (jsdom) projects
 npm run test:e2e       # Playwright: builds, starts the Node.js server, drives the app at four phone sizes
                        # (including several phones in one room)
 npm run build          # builds the client and the server's single-file bundle (what CI and Cloudflare run)
 npm run android:build  # build the web app, cap sync, Gradle assembleDebug
-npm run deploy         # build, then deploy the website to Cloudflare (needs `wrangler login`)
+npm run deploy         # build, then deploy the website and the rooms to Cloudflare (needs `wrangler login`)
 npm run deploy:preview # build, then upload a preview version without making it live
 ```
 
@@ -84,9 +88,10 @@ chosen by the agent. They are not yet confirmed by the user: ask before building
 ```
 apps/client/              Svelte app shell (picker, settings, lobby) + Capacitor config and android/
 apps/server-node/         Node.js host: static files, HTTP API, WebSocket rooms in memory
-apps/server-cloudflare/   Cloudflare host: Worker + one Durable Object per room             (planned, M4)
+apps/server-cloudflare/   Cloudflare host: Worker, a Durable Object per room, one per address for the limits
 packages/game-kit/        Locales, game manifest type, seeded random
-packages/room/            Host-neutral room engine, protocol, room codes, rate limiter
+packages/room/            Host-neutral room engine, protocol, room codes, rate limiter, HTTP API helpers
+packages/host-conformance/ The suite both server hosts must pass (HTTP API and room protocol)
 games/registry/           The games: manifests (for the app) and, at /logics, their rules (for servers)
 games/<id>/               One npm workspace per game (so far: le-curseur)
   manifest.ts             Title, tagline, languages
