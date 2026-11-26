@@ -11,6 +11,14 @@
   --accent: #2456d6;
   --accent-text: #ffffff;
   --focus: #1a73e8;
+  --danger: #c0392b;
+  /* Text colour of the accent on the page background (the accent itself can be too light or dark). */
+  --accent-ink: var(--accent);
+  /* Colours of the seats (teams or players) of a game on one phone. */
+  --seat-0: #2a6fdb;
+  --seat-0-ink: #1f5fc4;
+  --seat-1: #c25a0a;
+  --seat-1-ink: #b25009;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -46,6 +54,9 @@
     --accent: #7ba2ff;
     --accent-text: #0b1020;
     --focus: #8ab4f8;
+    --danger: #d9534f;
+    --seat-0-ink: #7fb0ff;
+    --seat-1-ink: #f59a52;
   }
 }
 
@@ -86,5 +97,156 @@ p {
   *::after {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---- A game on one phone: the page takes the colour of the seat that holds the phone ---- */
+
+body[data-seat='0'] {
+  --accent: var(--seat-0);
+  --accent-ink: var(--seat-0-ink);
+  --accent-text: #ffffff;
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg));
+}
+
+body[data-seat='1'] {
+  --accent: var(--seat-1);
+  --accent-ink: var(--seat-1-ink);
+  --accent-text: #ffffff;
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg));
+}
+
+/* ---- Shared building blocks, used by the shell and by every game's screens ---- */
+
+[hidden] {
+  display: none !important;
+}
+
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 20px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.btn.secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.btn.danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0 var(--space-1);
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.actions {
+  margin-top: auto;
+  padding-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.text-input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.15rem;
+}
+
+.text-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.hint {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.error {
+  min-height: 1.4em;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.kicker {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .screen {
+    animation: screen-in 0.15s ease-out;
+  }
+
+  @keyframes screen-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 }

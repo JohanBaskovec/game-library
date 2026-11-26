@@ -8,3 +8,6 @@ export const DEFAULT_LOCALE: Locale = 'en';
 export function isLocale(value: unknown): value is Locale {
   return typeof value === 'string' && (LOCALES as readonly string[]).includes(value);
 }
+
+/** A non-empty list of languages. */
+export type ReadonlyLocales = readonly [Locale, ...Locale[]];

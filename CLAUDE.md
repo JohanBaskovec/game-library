@@ -14,11 +14,11 @@ The first three games already exist as standalone vanilla HTML/JavaScript reposi
 
 ## Status
 
-**Milestone M1 (skeleton) is done**: the workspace, the client shell (empty game picker, settings, French
-and English), the storage, device and translation services, the Android project and CI. The Android
-build is verified; running the app on a device is still for the user to confirm. No game exists yet.
-Next is M2 in [`docs/ROADMAP.md`](docs/ROADMAP.md): Le Curseur on one phone. Do not start it before the
-user asks.
+**Milestones M1 (skeleton) and M2 (Le Curseur on one phone) are done**: the client shell, the services,
+the game contract, the first game with its tests, the Android project and CI. The Android build is
+verified; running the app on a device is still for the user to confirm. Rooms (several devices) do not
+exist yet. Next is M3 in [`docs/ROADMAP.md`](docs/ROADMAP.md): rooms. Do not start it before the user
+asks.
 
 ## Commands
 
@@ -81,12 +81,14 @@ apps/server-node/         Node.js host: static files, HTTP API, WebSocket rooms 
 apps/server-cloudflare/   Cloudflare host: Worker + one Durable Object per room             (planned, M4)
 packages/game-kit/        Locales, game manifest type, seeded random
 packages/room/            Host-neutral room engine and wire protocol                        (planned, M3)
-games/registry/           The list of games (empty until M2)
-games/<id>/logic/         Rules and state of one game: plain TypeScript                    (planned, M2)
-games/<id>/ui/            Svelte screens of that game                                      (planned, M2)
-games/<id>/content/       Word lists and similar data, per language                        (planned, M2)
-games/<id>/i18n/          Interface text of that game, per language                        (planned, M2)
-games/<id>/docs/          rules.md (for players) and spec.md (source of truth)             (planned, M2)
+games/registry/           The list of games (their manifests)
+games/<id>/               One npm workspace per game (so far: le-curseur)
+  manifest.ts             Title, tagline, languages
+  logic/                  Rules and state: plain TypeScript, no DOM types
+  ui/                     Svelte screens; ui/index.ts is what the shell loads
+  content/                Word lists and similar data, per language
+  i18n/                   Interface text of the game, per language
+  docs/                   rules.md (for players) and spec.md (source of truth)
 docs/                     Architecture, decisions, games, roadmap
 ```
 
@@ -133,7 +135,13 @@ settings, current language), `app.css` (design tokens and base styles).
 - Colours, spacing and sizes come from the CSS variables in `app.css`, never hard-coded in a component.
 - Tunable numbers (score bands, timers, counts) are named constants, never magic numbers.
 - Keep it simple: these are small games. No abstraction before a second game needs it.
-- A game is added by creating `games/<id>/` and one registry entry. Shell code never names a specific game.
+- A game is added by creating `games/<id>/` (copy the shape of `games/le-curseur`) and one line in
+  `games/registry`. Shell code never names a specific game. A game's `ui` never imports shell code: it
+  gets everything through props, and styles itself with the variables and classes of `app.css`.
+- Type checking has two configs per game: `tsconfig.logic.json` (no DOM types, so logic cannot touch the
+  browser) and `tsconfig.json` (with DOM, for `ui`).
+- A non-breaking space (French typography) is written `\u00A0`. Typing it into a file turns it into an
+  invisible literal character, so check with `grep -rl $'\xc2\xa0'` over the source and fix with a script.
 
 ## Porting an existing game
 
@@ -159,7 +167,9 @@ settings, current language), `app.css` (design tokens and base styles).
 
 - Logic and room engine: unit tests under Node.js. They must pass before any interface work is called done.
 - Interface: drive the real app in Chromium with Playwright (preinstalled in the cloud environment) at
-  phone sizes 360 × 640, 390 × 844 and 430 × 932, plus 320 × 568 as the minimum. Play a full game.
+  phone sizes 360 × 640, 390 × 844 and 430 × 932, plus 320 × 568 as the minimum. Play a full game. The
+  game tests use random seeds, so run them several times (`--repeat-each=3`) when changing them.
+- A new rule is not tested until you have broken it on purpose and seen a test fail.
 - Multi-device: several browser contexts joined to one room on the local Node.js server. Check that no
   device receives another seat's secrets.
 - Android: the cloud environment's setup script installs the Android SDK in `/opt/android-sdk`

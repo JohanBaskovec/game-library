@@ -32,3 +32,15 @@ export function detectLocale(languages: readonly string[]): Locale {
   }
   return DEFAULT_LOCALE;
 }
+
+/** A translate function for a game's own messages, bound to the language `locale()` returns. */
+export function createTranslator(
+  catalogs: Readonly<Record<Locale, Readonly<Record<string, string>>>>,
+  locale: () => Locale,
+): (key: string, params?: MessageParams) => string {
+  return (key, params) => {
+    const template = catalogs[locale()][key];
+    // A missing key is a bug in the game's messages; showing the key makes it visible, never blank.
+    return template === undefined ? key : format(template, params);
+  };
+}

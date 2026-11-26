@@ -48,6 +48,22 @@ The standalone games had strict constraints that the library replaces, and other
 
 ## Le Curseur
 
+**Ported in M2** to `games/le-curseur` (rules and specification in English in its `docs/`). Notes for the
+next ports:
+
+- The original's rules, numbers, 248 concept pairs and order of random draws are unchanged. The pairs were
+  converted by script and checked identical to the original; the ruler's zone drawing was checked
+  identical for all 101 target positions.
+- The original had no tests. The port has about 100, from the acceptance checklist of its spec, including
+  the score at every boundary, never repeating a pair, alternation, what each seat may see, and refusing
+  damaged saves. Each important rule was also checked by breaking it on purpose.
+- Differences that come from the library, not from a redesign: the two hand-off phases left the state
+  machine for the shell; the random numbers are seeded; the rules summary is built from the score
+  constants; the interface is in English and French.
+- Found while porting: the "How to play" row was smaller than 44 px, and a 20-letter team name made the
+  page scroll sideways on a phone. Both were fixed (they existed in the original).
+- Plan, as written before the port:
+
 - **Port first** (P-8): the smallest game, turn-based, logic already isolated.
 - Logic: `js/game.js` to TypeScript. The hand-off phases (`handoff-give`, `handoff-guess`) leave the
   state machine and become the shell's hand-off screen. `random()` becomes the shared seeded generator.

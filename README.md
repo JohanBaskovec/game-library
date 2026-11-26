@@ -3,14 +3,14 @@
 A library of small multiplayer games, available as a website and as a native app (Android first, iOS
 later). Play together on one phone, on several phones in the same room, or online.
 
-**Status: skeleton.** The app shell (empty game picker, settings in French and English), the Android
-project and the automated checks exist. No game has been ported yet; see [`docs/ROADMAP.md`](docs/ROADMAP.md).
+**Status: first game.** The app shell, the Android project, the automated checks and the first game, Le
+Curseur (playable on one phone, in French and English), exist. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Games
 
 | Game | In short | Origin |
 |---|---|---|
-| Le Curseur | Two teams. Make the other team find a position between two opposite ideas with a single word. | [position-on-a-scale-finder-game](https://github.com/JohanBaskovec/position-on-a-scale-finder-game) |
+| Le Curseur (playable on one phone) | Two teams. Make the other team find a position between two opposite ideas with a single word. | [position-on-a-scale-finder-game](https://github.com/JohanBaskovec/position-on-a-scale-finder-game) |
 | Le Jeu Masterclass, Un Banger | Two teams, 25 words. Each team gets the other to find its secret words with one-word clues. | [word-guessing-game](https://github.com/JohanBaskovec/word-guessing-game) |
 | Forest Maze | Two players guide four animals out of a forest against the clock, each holding only some of the moves. | [forest_maze](https://github.com/JohanBaskovec/forest_maze) |
 

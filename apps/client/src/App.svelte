@@ -2,6 +2,7 @@
   import { currentLocale, t } from './lib/i18n.svelte.ts';
   import { router, routeHref, type Route } from './lib/router.svelte.ts';
   import PickerScreen from './screens/PickerScreen.svelte';
+  import PlayScreen from './screens/PlayScreen.svelte';
   import SettingsScreen from './screens/SettingsScreen.svelte';
 
   const tabs: { route: Route; label: () => string }[] = [
@@ -15,30 +16,35 @@
   });
 </script>
 
-<div class="app">
-  <header class="topbar">
-    <span class="brand">{t('app.title')}</span>
-  </header>
+{#if router.route.name === 'play'}
+  {@const route = router.route}
+  <PlayScreen gameId={route.gameId} />
+{:else}
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">{t('app.title')}</span>
+    </header>
 
-  <main class="content">
-    {#if router.route.name === 'settings'}
-      <SettingsScreen />
-    {:else}
-      <PickerScreen />
-    {/if}
-  </main>
+    <main class="content">
+      {#if router.route.name === 'settings'}
+        <SettingsScreen />
+      {:else}
+        <PickerScreen />
+      {/if}
+    </main>
 
-  <nav class="tabs" aria-label={t('nav.label')}>
-    {#each tabs as tab (tab.route.name)}
-      <a
-        href={routeHref(tab.route)}
-        aria-current={router.route.name === tab.route.name ? 'page' : undefined}
-      >
-        {tab.label()}
-      </a>
-    {/each}
-  </nav>
-</div>
+    <nav class="tabs" aria-label={t('nav.label')}>
+      {#each tabs as tab (tab.route.name)}
+        <a
+          href={routeHref(tab.route)}
+          aria-current={router.route.name === tab.route.name ? 'page' : undefined}
+        >
+          {tab.label()}
+        </a>
+      {/each}
+    </nav>
+  </div>
+{/if}
 
 <style>
   .app {

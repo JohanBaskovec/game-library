@@ -1,6 +1,7 @@
 <script lang="ts">
   import { gameManifests } from '@game-library/registry';
-  import { t } from '../lib/i18n.svelte.ts';
+  import { currentLocale, t } from '../lib/i18n.svelte.ts';
+  import { routeHref } from '../lib/router.svelte.ts';
 </script>
 
 <section>
@@ -12,10 +13,21 @@
       <p>{t('picker.empty.body')}</p>
     </div>
   {:else}
-    <!-- Placeholder until games have translated titles and a play screen (milestone M2). -->
     <ul class="games">
       {#each gameManifests as game (game.id)}
-        <li>{game.id}</li>
+        <li>
+          <a class="card" href={routeHref({ name: 'play', gameId: game.id })}>
+            <span class="name">{game.title[currentLocale()]}</span>
+            <span class="tagline">{game.tagline[currentLocale()]}</span>
+            {#if !game.contentLocales.includes(currentLocale())}
+              <span class="badge">
+                {t('picker.contentIn', {
+                  language: t(game.contentLocales[0] === 'fr' ? 'lang.fr' : 'lang.en'),
+                })}
+              </span>
+            {/if}
+          </a>
+        </li>
       {/each}
     </ul>
   {/if}
@@ -50,5 +62,36 @@
     padding: 0;
     display: grid;
     gap: var(--space-3);
+  }
+
+  .card {
+    display: grid;
+    gap: var(--space-1);
+    min-height: var(--tap);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .name {
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+
+  .tagline {
+    color: var(--muted);
+  }
+
+  .badge {
+    justify-self: start;
+    margin-top: var(--space-1);
+    padding: 2px var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--muted);
   }
 </style>
