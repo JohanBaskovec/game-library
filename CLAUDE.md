@@ -116,5 +116,11 @@ Until the project is scaffolded there is nothing to run. Afterwards (tools are p
   phone sizes 360 × 640, 390 × 844 and 430 × 932, plus 320 × 568 as the minimum. Play a full game.
 - Multi-device: several browser contexts joined to one room on the local Node.js server. Check that no
   device receives another seat's secrets.
-- Android: needs the Android SDK, which the cloud environment does not have. Say so plainly instead of
-  claiming an Android build was verified.
+- Android: the cloud environment's setup script installs the Android SDK in `/opt/android-sdk`
+  (`ANDROID_HOME`), so the Android project can be built there. It has no KVM, so no emulator: running the
+  app on Android is checked by the user on their own machine. Never claim an Android run was verified
+  when only the build was.
+
+## Branches
+
+`main` is the stable branch. Work is done on a separate branch and reaches `main` through a pull request.

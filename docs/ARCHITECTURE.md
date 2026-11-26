@@ -275,7 +275,8 @@ Sources: [Durable Objects pricing](https://developers.cloudflare.com/durable-obj
 - **Interface**: Playwright in Chromium at phone sizes, playing complete games.
 - **Multi-device**: several Playwright browser contexts in one room against the Node.js host.
 - **Cloudflare host**: run locally with Cloudflare's own tooling before each deployment.
-- **Android**: on an emulator or a phone, on a machine with the Android SDK.
+- **Android**: the build runs in the cloud environment (Android SDK installed by its setup script).
+  Running the app needs an emulator or a phone, on the user's machine: the cloud has no KVM.
 
 ## 10. Later, and deliberately not designed yet
 
